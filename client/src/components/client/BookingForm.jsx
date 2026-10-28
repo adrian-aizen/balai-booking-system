@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { User, Mail, Phone, CalendarDays, BedDouble, Users, Check, X } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 // 1. Reusable FormField Component
 const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, min }) => (
@@ -45,21 +47,23 @@ const BookingForm = ({ onClose }) => {
   };
 
   // Secure submit handler (No console logs)
-  const handleSubmit = (e) => {
-    e.preventDefault(); // Prevents the page from refreshing
+  const handleSubmit = async (e) => {
+  e.preventDefault(); 
+  
+  try {
+    // 1. Add the document to the "bookings" collection
+    const docRef = await addDoc(collection(db, "bookings"), {
+      ...formData,
+      status: "pending",
+      createdAt: new Date()
+    });
     
-    // TODO: Add your secure backend submission logic here (e.g., Firebase)
-    // Example: 
-    // try {
-    //   await addDoc(collection(db, "bookings"), formData);
-    //   alert("Booking successfully submitted!");
-    //   onClose(); // Close the modal on success
-    // } catch (error) {
-    //   alert("An error occurred while booking. Please try again.");
-    // }
-    
-    alert("Booking processing... (Backend integration pending)");
-  };
+    alert("Booking successfully submitted! Reference ID: " + docRef.id);
+    onClose(); 
+  } catch (error) {
+    alert("Error submitting booking. Please try again.");
+  }
+};
 
   return (
     <div className="bg-white/95 backdrop-blur-md w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-fade-in-up mt-8">
