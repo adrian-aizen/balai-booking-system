@@ -52,6 +52,9 @@ const BookingForm = ({ onClose }) => {
     }));
   };
 
+  // Format today's date to YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
+
   // Secure submit handler (No console logs)
   const handleSubmit = async (e) => {
   e.preventDefault(); 
@@ -91,8 +94,8 @@ const BookingForm = ({ onClose }) => {
         <FormField icon={Mail} label="Email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. jcruz@gmail.com" />
         <FormField icon={Phone} label="Number" type="tel" name="number" value={formData.number} onChange={handleChange} placeholder="e.g. 09123456789" maxLength="11" pattern="[0-9]{11}" title="Please enter an 11-digit mobile number"/>        
         {/* Date Selectors */}
-        <FormField icon={CalendarDays} label="Check In" type="date" name="checkIn" value={formData.checkIn} onChange={handleChange} />
-        <FormField icon={CalendarDays} label="Check Out" type="date" name="checkOut" value={formData.checkOut} onChange={handleChange} />
+        <FormField icon={CalendarDays} label="Check In" type="date" name="checkIn" value={formData.checkIn} onChange={handleChange} min={today} />
+        <FormField icon={CalendarDays} label="Check Out" type="date" name="checkOut" value={formData.checkOut} onChange={handleChange} min={formData.checkIn || today} />
         
         <div className="flex gap-2">
             <div className="flex-1 min-w-0">
