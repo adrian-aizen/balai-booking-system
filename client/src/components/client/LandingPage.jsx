@@ -32,10 +32,9 @@ const LandingPage = () => {
 
           <hr className="w-full max-w-70 border-white my-6 border-t-2" />
 
-          <p className="text-white text-sm font-semibold tracking-widest uppercase leading-relaxed">
+          <p className="text-white text-sm font-poppins font-semibold tracking-widest uppercase leading-relaxed">
             A tranquil and secluded villa <br />
-            where you can truly unwind.
-          </p>
+            where you can truly unwind. </p>
 
           {/* Conditional Rendering: Show Button OR Form */}
           {!showForm ? (
