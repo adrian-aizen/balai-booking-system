@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { User, Lock } from 'lucide-react'; 
+import '../../firebase';
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({
