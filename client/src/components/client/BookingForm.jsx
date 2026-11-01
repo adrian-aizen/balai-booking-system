@@ -5,13 +5,13 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import MoltenMetal from '../ui/MoltenMetal'; 
 
-const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, min, compact, maxLength, pattern, title }) => (
-  <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-3 mb-3 ${compact ? 'px-3' : 'px-4'}`}>
-    <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-18' : 'w-28'}`}>
-      <Icon size={16} className="mr-2 text-[#D4B07A]" />
-      <span className="text-xs font-medium">{label}</span>
+const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, min, max, compact, maxLength, pattern, title }) => (
+  <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 ${compact ? 'px-2' : 'px-3'}`}>
+    <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-auto' : 'w-20'}`}>
+      <Icon size={14} className={`text-[#D4B07A] shrink-0 ${compact ? 'mr-1' : 'mr-1.5'}`} />
+      <span className="text-[11px] font-medium whitespace-nowrap">{label}</span>
     </div>
-    <div className={`w-px h-5 bg-gray-300 ${compact ? 'mx-2' : 'mx-3'}`}></div>
+    <div className={`w-px h-5 bg-gray-300 ${compact ? 'ml-1.5 mr-2' : 'mx-2'} shrink-0`}></div>
     <input 
       type={type} 
       name={name}
@@ -19,27 +19,29 @@ const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, pl
       onChange={onChange}
       placeholder={placeholder}
       min={min}
+      max={max} /* <-- Added max prop here */
       maxLength={maxLength}
       pattern={pattern}
       title={title}
       required
-      className="bg-transparent flex-1 outline-none text-sm text-gray-800 font-medium w-full min-w-0" 
+      className="bg-transparent flex-1 outline-none text-xs text-gray-800 font-medium w-full min-w-0" 
     />
   </div>
 );
 
 const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
-  <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-3 mb-3 ${compact ? 'px-3' : 'px-4'}`}>
-    <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-18' : 'w-28'}`}>
-      <Icon size={16} className="mr-2 text-[#D4B07A]" />
-      <span className="text-xs font-medium">{label}</span>
+  <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 ${compact ? 'px-2' : 'px-3'}`}>
+    {/* CHANGED: Used w-auto on compact to free up maximum space */}
+    <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-auto' : 'w-20'}`}>
+      <Icon size={14} className={`text-[#D4B07A] shrink-0 ${compact ? 'mr-1' : 'mr-1.5'}`} />
+      <span className="text-[11px] font-medium whitespace-nowrap">{label}</span>
     </div>
-    <div className={`w-px h-5 bg-gray-300 ${compact ? 'mx-2' : 'mx-3'}`}></div>
+    <div className={`w-px h-5 bg-gray-300 ${compact ? 'ml-1.5 mr-2' : 'mx-2'} shrink-0`}></div>
     <select
       name={name}
       value={value}
       onChange={onChange}
-      className="bg-transparent flex-1 outline-none text-sm text-gray-800 font-medium w-full min-w-0 cursor-pointer"
+      className="bg-transparent flex-1 outline-none text-xs text-gray-800 font-medium w-full min-w-0 cursor-pointer"
     >
       <option value="Main Villa">Main</option>
       <option value="Mini Villa">Mini</option>
@@ -63,13 +65,37 @@ export default function BookingForm() {
 
   const handleChange = (e) => {
     let { name, value } = e.target;
+    
     if (name === "number") {
       value = value.replace(/\D/g, ''); 
     }
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: value
-    }));
+
+    setFormData(prevData => {
+      let updatedValue = value;
+      
+      // Prevent manually typing a number higher than the max allowed
+      if (name === "people") {
+        const maxPax = prevData.villaType === 'Main Villa' ? 25 : 10;
+        if (Number(value) > maxPax) {
+          updatedValue = maxPax; 
+        }
+      }
+
+      // Automatically reduce pax if switching to Mini Villa with > 10 people
+      let updatedPeople = prevData.people;
+      if (name === "villaType") {
+        const newMaxPax = value === 'Main Villa' ? 25 : 10;
+        if (Number(prevData.people) > newMaxPax) {
+          updatedPeople = newMaxPax;
+        }
+      }
+
+      return {
+        ...prevData,
+        [name]: updatedValue,
+        ...(name === "villaType" && { people: updatedPeople }) // Applies the auto-reduction if needed
+      };
+    });
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -104,8 +130,7 @@ export default function BookingForm() {
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden font-poppins flex flex-col items-center pt-24 pb-12 px-6">
-      
-      {/* --- REACTBITS BACKGROUND LAYER --- */}
+
       {/* --- REACTBITS BACKGROUND LAYER --- */}
       <div className="fixed inset-0 -z-10 bg-[#b97216]">
         <MoltenMetal
@@ -190,8 +215,7 @@ export default function BookingForm() {
         </div>
 
         {/* Booking Form Card */}
-        <div className="bg-white/95 backdrop-blur-md w-full rounded-4xl p-6 shadow-2xl relative animate-fade-in-up">
-          {/* Close button now acts as a "Back to Home" button */}
+          <div  className="bg-white/95 backdrop-blur-md w-full rounded-4xl p-5 shadow-2xl relative animate-fade-in-up">          
           <button 
             onClick={() => navigate('/')} 
             className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors"
@@ -216,11 +240,15 @@ export default function BookingForm() {
                     <SelectField icon={HomeIcon} label="Villa" name="villaType" value={formData.villaType} onChange={handleChange} compact={true} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <FormField icon={Users} label="People" type="number" name="people" min="1" value={formData.people} onChange={handleChange} compact={true} />
+                    <FormField icon={Users} label="People" type="number" name="people" min="1" 
+                      max={formData.villaType === 'Main Villa' ? "25" : "10"} value={formData.people} onChange={handleChange} compact={true} />
                 </div>
             </div>
 
-            <button type="submit" className="mt-2 w-[140px] bg-[#D4B07A] text-white px-6 py-3 rounded-full font-medium text-sm shadow-md hover:bg-[#c29f68] transition-colors flex items-center justify-center gap-2">
+            <button 
+              type="submit" 
+              className="mt-2 w-[150px] bg-[#D4B07A] text-white py-2.5 rounded-full font-medium text-sm shadow-md hover:bg-[#c29f68] transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+            >
               <Check size={18} />
               Book Now
             </button>

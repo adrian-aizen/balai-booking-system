@@ -1,26 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { User, Lock } from 'lucide-react'; 
-import '../../firebase';
+import { User, Lock, X } from 'lucide-react'; 
+import '../../firebase'; // Adjust path if needed based on where you save this file
 
-const AdminLogin = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+const LoginModal = ({ isOpen, onClose }) => {
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
   const auth = getAuth();
 
+  // If the modal is not open, don't render anything
+  if (!isOpen) return null;
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleLogin = async (e) => {
@@ -29,34 +26,37 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      // Firebase Auth uses email, so we pass the 'email' state even if the UI says 'Username'
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      navigate('/admin-dashboard'); // Redirect to your dashboard route
+      onClose(); 
+      navigate('/admin-dashboard'); 
     } catch (err) {
       console.error("Login failed:", err);
-      setError("Invalid username or password.");
+      setError("Invalid email or password.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    // Background wrapper (replace the background image URL with your actual asset)
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 bg-cover bg-center font-poppins relative" 
-         style={{ backgroundImage: "url('/src/assets/balaibg.jpg')" }}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
       
-      {/* Dark overlay for the background */}
-      <div className="absolute inset-0 bg-black/40"></div>
-
-      {/* Login Card */}
-      <div className="bg-white rounded-2xl p-8 w-full max-w-md relative z-10 shadow-2xl mx-4">
+      {/* Modal Card */}
+      <div className="bg-white rounded-3xl p-8 w-full max-w-md relative shadow-2xl animate-fade-in-up">
         
-        <div className="mb-8">
+        {/* Close Button */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors"
+        >
+          <X size={24} />
+        </button>
+
+        <div className="mb-8 mt-2">
           <p className="text-sm text-gray-500 mb-2">Balai88</p>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Admin <span className="text-[#D4B07A] italic font-serif font-normal">Access</span>
+            Welcome <span className="text-[#D4B07A] italic font-serif font-normal">Back</span>
           </h1>
-          <p className="text-xs text-gray-500">Welcome back. Sign in to manage your resort.</p>
+          <p className="text-xs text-gray-500">Sign in to manage your account or resort.</p>
         </div>
 
         {error && (
@@ -66,10 +66,9 @@ const AdminLogin = () => {
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
-          
-          {/* Username / Email Field */}
+          {/* Email Field */}
           <div>
-            <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1 ml-1">Username</label>
+            <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1 ml-1">Email</label>
             <div className="flex items-center bg-[#EFEFEF] rounded-xl px-4 py-3">
               <User size={16} className="text-[#D4B07A] shrink-0 mr-3" />
               <div className="w-px h-5 bg-gray-300 mr-3"></div>
@@ -78,7 +77,7 @@ const AdminLogin = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Admin Email"
+                placeholder="e.g. admin@balai88.com"
                 required
                 className="bg-transparent flex-1 outline-none text-sm text-gray-800 font-medium w-full min-w-0"
               />
@@ -107,15 +106,14 @@ const AdminLogin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-32 bg-[#D4B07A] hover:bg-[#c29c66] text-white text-sm font-semibold py-3 rounded-full transition-colors mt-6 disabled:opacity-70"
+            className="w-full bg-[#D4B07A] hover:bg-[#c29c66] text-white text-sm font-medium py-3.5 rounded-full transition-colors mt-6 disabled:opacity-70"
           >
-            {loading ? "Logging in..." : "Log in"}
+            {loading ? "Signing in..." : "Sign in"}
           </button>
-          
         </form>
       </div>
     </div>
   );
 };
 
-export default AdminLogin;
+export default LoginModal;

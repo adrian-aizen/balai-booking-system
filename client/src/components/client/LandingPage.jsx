@@ -4,9 +4,11 @@ import { Menu, X, Home as HomeIcon, TreePine, CalendarDays, LogIn, Leaf, Sparkle
 import { motion, useScroll, useTransform } from 'framer-motion';
 import Carousel from '../ui/Carousel';
 import bgImage from '../../assets/balaibg.jpg';
+import LoginModal from '../ui/LoginModal';
 
 export default function LandingPage() {
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false); // <-- ADDED: State for the modal
   const heroRef = useRef(null);
   const navigate = useNavigate();
   
@@ -92,12 +94,25 @@ export default function LandingPage() {
             <button onClick={() => scrollToSection('booking')} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
               <CalendarDays size={20} /> <span className="text-sm">Book Now</span>
             </button>
-            <button className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4">
+            {/* CHANGED: Opens the modal and closes the drawer */}
+            <button 
+              onClick={() => {
+                setIsNavOpen(false);
+                setIsLoginOpen(true);
+              }} 
+              className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4"
+            >
               <LogIn size={20} /> <span className="text-sm">Sign In</span>
             </button>
           </nav>
         </div>
       </div>
+
+      {/* ADDED: Login Modal Instance */}
+      <LoginModal 
+        isOpen={isLoginOpen} 
+        onClose={() => setIsLoginOpen(false)} 
+      />
 
       {/* --- 1. HERO SECTION --- */}
       <section id="home" ref={heroRef} className="relative h-screen w-full overflow-hidden flex flex-col justify-center px-8">
