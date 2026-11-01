@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { User, Mail, Phone, CalendarDays, Home, Users, Check, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Mail, Phone, CalendarDays, Home as HomeIcon, Users, Check, X, TreePine, LogIn } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import MoltenMetal from '../ui/MoltenMetal'; 
 
 const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, min, compact, maxLength, pattern, title }) => (
   <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-3 mb-3 ${compact ? 'px-3' : 'px-4'}`}>
@@ -26,7 +28,6 @@ const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, pl
   </div>
 );
 
-// New component specifically for the Dropdown to match FormField styling
 const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
   <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-3 mb-3 ${compact ? 'px-3' : 'px-4'}`}>
     <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-18' : 'w-28'}`}>
@@ -46,24 +47,25 @@ const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
   </div>
 );
 
-const BookingForm = ({ onClose }) => {
+export default function BookingForm() {
+  const navigate = useNavigate();
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     number: '',
     checkIn: '',
     checkOut: '',
-    villaType: 'Main Villa', // Replaces 'rooms' state
+    villaType: 'Main Villa',
     people: 1
   });
 
   const handleChange = (e) => {
     let { name, value } = e.target;
-
     if (name === "number") {
       value = value.replace(/\D/g, ''); 
     }
-
     setFormData(prevData => ({
       ...prevData,
       [name]: value
@@ -74,67 +76,157 @@ const BookingForm = ({ onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
-  
     try {
-      // Explicitly map formData to match your new Firestore schema
       const docRef = await addDoc(collection(db, "bookings"), {
         guestName: formData.name,
         email: formData.email,
         phone: formData.number,
         checkIn: formData.checkIn,
         checkOut: formData.checkOut,
-        villaType: formData.villaType,     // Sends "Main Villa" or "Mini Villa"
-        people: Number(formData.people),   // Ensures this is saved as a number
+        villaType: formData.villaType,
+        people: Number(formData.people),
         status: "pending",
-        totalPrice: 0,                     // Placeholder for later calculation
+        totalPrice: 0,
         createdAt: new Date()
       });
-      
       alert("Booking successfully submitted! Reference ID: " + docRef.id);
-      onClose(); 
+      navigate('/'); // Redirect back to home after successful booking
     } catch {
       alert("An error occurred while booking. Please try again.");
     }
   };
 
+  // Helper for drawer navigation
+  const handleNav = (path) => {
+    setIsNavOpen(false);
+    navigate(path);
+  };
+
   return (
-    <div className="bg-white/95 backdrop-blur-md w-full max-w-sm rounded-4xl p-6 shadow-2xl relative animate-fade-in-up mt-8">
+    <div className="relative min-h-screen w-full overflow-x-hidden font-poppins flex flex-col items-center pt-24 pb-12 px-6">
+      
+      {/* --- REACTBITS BACKGROUND LAYER --- */}
+      {/* --- REACTBITS BACKGROUND LAYER --- */}
+      <div className="fixed inset-0 -z-10 bg-[#b97216]">
+        <MoltenMetal
+          colors={["#b97216","#ffffff"]}
+          coreColor="#ffffff"
+          speed={0.73}
+          scale={5.6}
+          detail={3.6}
+          glow={1.6}
+          thickness={1.03}
+          haze={1}
+          mouseInteraction={false}
+          flareOnClick={false}
+          colorMode="frost"
+          swirl={2}
+          turbulence={0.33}
+          brightness={2.4}
+          rotation={16}
+          offsetX={0.12}
+          grain={0}
+          drift={1}
+          mouseStrength={0.53}
+        />
+      </div>
+
+      {/* --- NAVIGATION DRAWER & BLUR OVERLAY --- */}
+      {isNavOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-all duration-300"
+          onClick={() => setIsNavOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Drawer */}
+      <div className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 ease-in-out ${isNavOpen ? 'translate-x-0' : '-translate-x-full'} bg-black/30 backdrop-blur-xl border-r border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)]`}>
+        <div className="p-6 flex flex-col h-full">
+          <button onClick={() => setIsNavOpen(false)} className="self-end text-white/70 hover:text-white mb-8 transition-colors">
+            <X size={24} />
+          </button>
+          <nav className="flex flex-col gap-6 text-gray-400">
+            <button onClick={() => handleNav('/')} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
+              <HomeIcon size={20} /> <span className="text-sm">Home</span>
+            </button>
+            <button onClick={() => handleNav('/#about')} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
+              <TreePine size={20} /> <span className="text-sm">About Us</span>
+            </button>
+            <button onClick={() => setIsNavOpen(false)} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold text-white font-semibold">
+              <CalendarDays size={20} /> <span className="text-sm">Book Now</span>
+            </button>
+            <button className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4">
+              <LogIn size={20} /> <span className="text-sm">Sign In</span>
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* Hamburger Menu Button */}
       <button 
-        onClick={onClose} 
-        className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors"
+        onClick={() => setIsNavOpen(true)}
+        className="fixed top-6 left-6 z-40 p-2.5 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white shadow-lg hover:bg-white/30 transition-all"
       >
-        <X size={20} />
+        <div className="flex flex-col gap-1.5 w-5">
+          <span className="block h-0.5 w-full bg-white rounded-full"></span>
+          <span className="block h-0.5 w-full bg-white rounded-full"></span>
+          <span className="block h-0.5 w-full bg-white rounded-full"></span>
+        </div>
       </button>
 
-      <h2 className="text-xl font-bold text-black mb-6">
-        How long do you <span className="italic text-[#D4B07A]">plan to stay?</span>
-      </h2>
-
-      <form onSubmit={handleSubmit}>
-        <FormField icon={User} label="Name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Juan Cruz" />
-        <FormField icon={Mail} label="Email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. jcruz@gmail.com" />
-        <FormField icon={Phone} label="Number" type="tel" name="number" value={formData.number} onChange={handleChange} placeholder="e.g. 09123456789" maxLength="11" pattern="[0-9]{11}" title="Please enter an 11-digit mobile number"/>        
+      {/* --- PAGE CONTENT --- */}
+      <div className="w-full max-w-sm relative z-10 flex flex-col">
         
-        <FormField icon={CalendarDays} label="Check In" type="date" name="checkIn" value={formData.checkIn} onChange={handleChange} min={today} />
-        <FormField icon={CalendarDays} label="Check Out" type="date" name="checkOut" value={formData.checkOut} onChange={handleChange} min={formData.checkIn || today} />
-        
-        <div className="flex gap-2">
-            <div className="flex-1 min-w-0">
-                {/* Replaced FormField with the new SelectField using the Home icon */}
-                <SelectField icon={Home} label="Villa" name="villaType" value={formData.villaType} onChange={handleChange} compact={true} />
-            </div>
-            <div className="flex-1 min-w-0">
-                <FormField icon={Users} label="People" type="number" name="people" min="1" value={formData.people} onChange={handleChange} compact={true} />
-            </div>
+        {/* Hero Text */}
+        <div className="mb-8 drop-shadow-md">
+          <h1 className="text-4xl text-white font-light leading-tight mb-4">
+            Your private <br/> retreat for <br/> 
+            <span className="font-serif italic font-bold">rest and <br/> relaxation.</span>
+          </h1>
+          <div className="w-16 h-px bg-white mb-4"></div>
+          <p className="text-white text-xs font-medium tracking-wide">
+            A TRANQUIL AND SECLUDED VILLA <br/> WHERE YOU CAN TRULY UNWIND.
+          </p>
         </div>
 
-        <button type="submit" className="mt-2 w-1/2 bg-[#E6BA7A] text-white px-6 py-3 rounded-full font-medium text-sm shadow-md hover:bg-[#d4a96b] transition-colors flex items-center justify-center gap-2">
-          <Check size={18} />
-          Book Now
-        </button>
-      </form>
+        {/* Booking Form Card */}
+        <div className="bg-white/95 backdrop-blur-md w-full rounded-4xl p-6 shadow-2xl relative animate-fade-in-up">
+          {/* Close button now acts as a "Back to Home" button */}
+          <button 
+            onClick={() => navigate('/')} 
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors"
+          >
+            <X size={20} />
+          </button>
+
+          <h2 className="text-xl font-bold text-black mb-6">
+            How long do you <span className="italic text-[#D4B07A]">plan to stay?</span>
+          </h2>
+
+          <form onSubmit={handleSubmit}>
+            <FormField icon={User} label="Name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Juan Cruz" />
+            <FormField icon={Mail} label="Email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. jcruz@gmail.com" />
+            <FormField icon={Phone} label="Number" type="tel" name="number" value={formData.number} onChange={handleChange} placeholder="e.g. 09123456789" maxLength="11" pattern="[0-9]{11}" title="Please enter an 11-digit mobile number"/>        
+            
+            <FormField icon={CalendarDays} label="Check In" type="date" name="checkIn" value={formData.checkIn} onChange={handleChange} min={today} />
+            <FormField icon={CalendarDays} label="Check Out" type="date" name="checkOut" value={formData.checkOut} onChange={handleChange} min={formData.checkIn || today} />
+            
+            <div className="flex gap-2">
+                <div className="flex-1 min-w-0">
+                    <SelectField icon={HomeIcon} label="Villa" name="villaType" value={formData.villaType} onChange={handleChange} compact={true} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <FormField icon={Users} label="People" type="number" name="people" min="1" value={formData.people} onChange={handleChange} compact={true} />
+                </div>
+            </div>
+
+            <button type="submit" className="mt-2 w-[140px] bg-[#D4B07A] text-white px-6 py-3 rounded-full font-medium text-sm shadow-md hover:bg-[#c29f68] transition-colors flex items-center justify-center gap-2">
+              <Check size={18} />
+              Book Now
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default BookingForm;
+}
