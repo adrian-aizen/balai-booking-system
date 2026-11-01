@@ -8,8 +8,7 @@ const GOLD = "#B97216";
 const GOLD_DEEP = "#C98A1E";
 const ALERT = "#D9442B";
  
-const villaStatus = {
-  status: "Occupied", // "Occupied" | "Vacant" 
+const villaStatus = { 
   checkOut: "2026-12-21", 
   guest: "Felipe Pati", // Kunware lang muna HAHAHAHA
 };
