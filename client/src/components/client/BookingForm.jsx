@@ -8,7 +8,7 @@ import MoltenMetal from '../ui/MoltenMetal';
 const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, min, max, compact, maxLength, pattern, title }) => (
   <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 ${compact ? 'px-2' : 'px-3'}`}>
     <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-auto' : 'w-20'}`}>
-      <Icon size={14} className={`text-[#D4B07A] shrink-0 ${compact ? 'mr-1' : 'mr-1.5'}`} />
+      <Icon size={14} className={`text-[#C98A1E] shrink-0 ${compact ? 'mr-1' : 'mr-1.5'}`} />
       <span className="text-[11px] font-medium whitespace-nowrap">{label}</span>
     </div>
     <div className={`w-px h-5 bg-gray-300 ${compact ? 'ml-1.5 mr-2' : 'mx-2'} shrink-0`}></div>
@@ -19,7 +19,7 @@ const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, pl
       onChange={onChange}
       placeholder={placeholder}
       min={min}
-      max={max} /* <-- Added max prop here */
+      max={max} 
       maxLength={maxLength}
       pattern={pattern}
       title={title}
@@ -31,9 +31,8 @@ const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, pl
 
 const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
   <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 ${compact ? 'px-2' : 'px-3'}`}>
-    {/* CHANGED: Used w-auto on compact to free up maximum space */}
     <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-auto' : 'w-20'}`}>
-      <Icon size={14} className={`text-[#D4B07A] shrink-0 ${compact ? 'mr-1' : 'mr-1.5'}`} />
+      <Icon size={14} className={`text-[#C98A1E] shrink-0 ${compact ? 'mr-1' : 'mr-1.5'}`} />
       <span className="text-[11px] font-medium whitespace-nowrap">{label}</span>
     </div>
     <div className={`w-px h-5 bg-gray-300 ${compact ? 'ml-1.5 mr-2' : 'mx-2'} shrink-0`}></div>
@@ -73,7 +72,6 @@ export default function BookingForm() {
     setFormData(prevData => {
       let updatedValue = value;
       
-      // Prevent manually typing a number higher than the max allowed
       if (name === "people") {
         const maxPax = prevData.villaType === 'Main Villa' ? 25 : 10;
         if (Number(value) > maxPax) {
@@ -81,7 +79,6 @@ export default function BookingForm() {
         }
       }
 
-      // Automatically reduce pax if switching to Mini Villa with > 10 people
       let updatedPeople = prevData.people;
       if (name === "villaType") {
         const newMaxPax = value === 'Main Villa' ? 25 : 10;
@@ -93,7 +90,7 @@ export default function BookingForm() {
       return {
         ...prevData,
         [name]: updatedValue,
-        ...(name === "villaType" && { people: updatedPeople }) // Applies the auto-reduction if needed
+        ...(name === "villaType" && { people: updatedPeople })
       };
     });
   };
@@ -113,28 +110,27 @@ export default function BookingForm() {
         people: Number(formData.people),
         status: "pending",
         totalPrice: 0,
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       });
       alert("Booking successfully submitted! Reference ID: " + docRef.id);
-      navigate('/'); // Redirect back to home after successful booking
+      navigate('/'); 
     } catch {
       alert("An error occurred while booking. Please try again.");
     }
   };
 
-  // Helper for drawer navigation
   const handleNav = (path) => {
     setIsNavOpen(false);
     navigate(path);
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden font-poppins flex flex-col items-center pt-24 pb-12 px-6">
+    <div className="relative min-h-screen w-full overflow-x-hidden font-poppins flex flex-col items-center justify-center pt-24 lg:pt-0 pb-12 px-6 lg:px-20">
 
-      {/* --- REACTBITS BACKGROUND LAYER --- */}
-      <div className="fixed inset-0 -z-10 bg-[#b97216]">
+      {/* --- MATCHED ADMIN ACCENT COLOR & MOLTEN METAL --- */}
+      <div className="fixed inset-0 -z-10 bg-[#C98A1E]">
         <MoltenMetal
-          colors={["#b97216","#ffffff"]}
+          colors={["#C98A1E","#ffffff"]}
           coreColor="#ffffff"
           speed={0.73}
           scale={5.6}
@@ -164,7 +160,6 @@ export default function BookingForm() {
         />
       )}
 
-      {/* Sidebar Drawer */}
       <div className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 ease-in-out ${isNavOpen ? 'translate-x-0' : '-translate-x-full'} bg-black/30 backdrop-blur-xl border-r border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)]`}>
         <div className="p-6 flex flex-col h-full">
           <button onClick={() => setIsNavOpen(false)} className="self-end text-white/70 hover:text-white mb-8 transition-colors">
@@ -187,7 +182,6 @@ export default function BookingForm() {
         </div>
       </div>
 
-      {/* Hamburger Menu Button */}
       <button 
         onClick={() => setIsNavOpen(true)}
         className="fixed top-6 left-6 z-40 p-2.5 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white shadow-lg hover:bg-white/30 transition-all"
@@ -199,32 +193,32 @@ export default function BookingForm() {
         </div>
       </button>
 
-      {/* --- PAGE CONTENT --- */}
-      <div className="w-full max-w-sm relative z-10 flex flex-col">
+      {/* --- RESPONSIVE PAGE CONTENT --- */}
+      <div className="w-full max-w-6xl relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
         
-        {/* Hero Text */}
-        <div className="mb-8 drop-shadow-md">
-          <h1 className="text-4xl text-white font-light leading-tight mb-4">
-            Your private <br/> retreat for <br/> 
-            <span className="font-serif italic font-bold">rest and <br/> relaxation.</span>
+        {/* Left Column: Hero Text */}
+        <div className="w-full lg:w-1/2 drop-shadow-md text-center lg:text-left mt-8 lg:mt-0">
+          <h1 className="text-4xl lg:text-6xl text-white font-light leading-tight mb-4 lg:mb-6">
+            Your private <br className="hidden lg:block"/> retreat for <br className="hidden lg:block"/> 
+            <span className="font-serif italic font-bold">rest and <br className="lg:hidden"/> relaxation.</span>
           </h1>
-          <div className="w-16 h-px bg-white mb-4"></div>
-          <p className="text-white text-xs font-medium tracking-wide">
+          <div className="w-16 lg:w-24 h-[2px] bg-white mb-4 lg:mb-6 mx-auto lg:mx-0"></div>
+          <p className="text-white text-xs lg:text-sm font-medium tracking-wide lg:leading-relaxed">
             A TRANQUIL AND SECLUDED VILLA <br/> WHERE YOU CAN TRULY UNWIND.
           </p>
         </div>
 
-        {/* Booking Form Card */}
-          <div  className="bg-white/95 backdrop-blur-md w-full rounded-4xl p-5 shadow-2xl relative animate-fade-in-up">          
+        {/* Right Column: Booking Form Card */}
+        <div className="bg-white/95 backdrop-blur-md w-full max-w-sm lg:max-w-md rounded-[32px] p-6 lg:p-8 shadow-2xl relative animate-fade-in-up shrink-0">          
           <button 
             onClick={() => navigate('/')} 
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors"
+            className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 transition-colors"
           >
             <X size={20} />
           </button>
 
-          <h2 className="text-xl font-bold text-black mb-6">
-            How long do you <span className="italic text-[#D4B07A]">plan to stay?</span>
+          <h2 className="text-xl lg:text-2xl font-bold text-black mb-6">
+            How long do you <span className="italic text-[#C98A1E]">plan to stay?</span>
           </h2>
 
           <form onSubmit={handleSubmit}>
@@ -247,7 +241,7 @@ export default function BookingForm() {
 
             <button 
               type="submit" 
-              className="mt-2 w-[150px] bg-[#D4B07A] text-white py-2.5 rounded-full font-medium text-sm shadow-md hover:bg-[#c29f68] transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+              className="mt-4 w-full bg-[#C98A1E] text-white py-3 lg:py-3 rounded-full font-medium text-sm shadow-md hover:bg-[#b57a18] transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
             >
               <Check size={18} />
               Book Now

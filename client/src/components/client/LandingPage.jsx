@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, X, Home as HomeIcon, TreePine, CalendarDays, LogIn, Leaf, Sparkles } from 'lucide-react';
+import { Menu, X, Home as HomeIcon, TreePine, CalendarDays, LogIn, Leaf, Sparkles, ArrowUpRight } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import Carousel from '../ui/Carousel';
 import bgImage from '../../assets/balaibg.jpg';
@@ -8,11 +8,12 @@ import LoginModal from '../ui/LoginModal';
 
 export default function LandingPage() {
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false); // <-- ADDED: State for the modal
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null); // <-- ADDED: State for full-screen image
+  
   const heroRef = useRef(null);
   const navigate = useNavigate();
-  
-  // Scroll-Expand Effect Logic
+
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
@@ -25,8 +26,7 @@ export default function LandingPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Hardcoded Image Arrays
-  const mainVillaImages = [
+    const mainVillaImages = [
     { id: 1, src: '/main/Main1.jpg', alt: 'Main Villa 1' },
     { id: 2, src: '/main/Main2.jpg', alt: 'Main Villa 2' },
     { id: 3, src: '/main/Main3.jpg', alt: 'Main Villa 3' },
@@ -34,20 +34,20 @@ export default function LandingPage() {
     { id: 5, src: '/main/Main5.jpg', alt: 'Main Villa 5' },
     { id: 6, src: '/main/Main6.jpg', alt: 'Main Villa 6' },
     { id: 7, src: '/main/Main7.jpg', alt: 'Main Villa 7' },
-    { id: 8, src: '/main/Main8.jpg', alt: 'Main Villa 8' },
-    { id: 9, src: '/main/Main9.jpg', alt: 'Main Villa 9' },
-    { id: 10, src: '/main/Main10.jpg', alt: 'Main Villa 10' },
-    { id: 11, src: '/main/Main11.jpg', alt: 'Main Villa 11' },
-    { id: 12, src: '/main/Main12.jpg', alt: 'Main Villa 12' },
-    { id: 13, src: '/main/Main13.jpg', alt: 'Main Villa 13' },
-    { id: 14, src: '/main/Main14.jpg', alt: 'Main Villa 14' },
-    { id: 15, src: '/main/Main15.jpg', alt: 'Main Villa 15' },
-    { id: 16, src: '/main/Main16.jpg', alt: 'Main Villa 16' },
-    { id: 17, src: '/main/Main17.jpg', alt: 'Main Villa 17' },
-    { id: 18, src: '/main/Main18.jpg', alt: 'Main Villa 18' },
-    { id: 19, src: '/main/Main19.jpg', alt: 'Main Villa 19' },
-    { id: 20, src: '/main/Main20.jpg', alt: 'Main Villa 20' },
-    { id: 21, src: '/main/Main21.jpg', alt: 'Main Villa 21' }
+    { id: 8, src: '/main/Main8.jpg', alt: 'Main Villa 2' },
+    { id: 9, src: '/main/Main9.jpg', alt: 'Main Villa 3' },
+    { id: 10, src: '/main/Main10.jpg', alt: 'Main Villa 4' },
+    { id: 11, src: '/main/Main11.jpg', alt: 'Main Villa 5' },
+    { id: 12, src: '/main/Main12.jpg', alt: 'Main Villa 6' },
+    { id: 13, src: '/main/Main13.jpg', alt: 'Main Villa 7' },
+    { id: 14, src: '/main/Main14.jpg', alt: 'Main Villa 6' },
+    { id: 15, src: '/main/Main15.jpg', alt: 'Main Villa 7' },
+    { id: 16, src: '/main/Main16.jpg', alt: 'Main Villa 2' },
+    { id: 17, src: '/main/Main17.jpg', alt: 'Main Villa 3' },
+    { id: 18, src: '/main/Main18.jpg', alt: 'Main Villa 4' },
+    { id: 19, src: '/main/Main19.jpg', alt: 'Main Villa 5' },
+    { id: 20, src: '/main/Main20.jpg', alt: 'Main Villa 6' },
+    { id: 21, src: '/main/Main21.jpg', alt: 'Main Villa 7' },
   ];
 
   const miniVillaImages = [
@@ -56,66 +56,99 @@ export default function LandingPage() {
     { id: 3, src: '/mini/Mini3.jpg', alt: 'Mini Villa 3' },
     { id: 4, src: '/mini/Mini4.jpg', alt: 'Mini Villa 4' },
     { id: 5, src: '/mini/Mini5.jpg', alt: 'Mini Villa 5' },
-    { id: 6, src: '/mini/Mini6.jpg', alt: 'Mini Villa 6' },
-    { id: 7, src: '/mini/Mini7.jpg', alt: 'Mini Villa 7' },
-    { id: 8, src: '/mini/Mini8.jpg', alt: 'Mini Villa 8' },
-    { id: 9, src: '/mini/Mini9.jpg', alt: 'Mini Villa 9' },
-    { id: 10, src: '/mini/Mini10.jpg', alt: 'Mini Villa 10' },
-    { id: 11, src: '/mini/Mini11.jpg', alt: 'Mini Villa 11' },
-    { id: 12, src: '/mini/Mini12.jpg', alt: 'Mini Villa 12' },
-    { id: 13, src: '/mini/Mini13.jpg', alt: 'Mini Villa 13' },
-    { id: 14, src: '/mini/Mini14.jpg', alt: 'Mini Villa 14' }
+    { id: 6, src: '/mini/Mini6.jpg', alt: 'Mini Villa 1' },
+    { id: 7, src: '/mini/Mini7.jpg', alt: 'Mini Villa 2' },
+    { id: 8, src: '/mini/Mini8.jpg', alt: 'Mini Villa 3' },
+    { id: 9, src: '/mini/Mini9.jpg', alt: 'Mini Villa 4' },
+    { id: 10, src: '/mini/Mini10.jpg', alt: 'Mini Villa 5' },
+    { id: 11, src: '/mini/Mini11.jpg', alt: 'Mini Villa 1' },
+    { id: 12, src: '/mini/Mini12.jpg', alt: 'Mini Villa 2' },
+    { id: 13, src: '/mini/Mini13.jpg', alt: 'Mini Villa 3' },
+    { id: 14, src: '/mini/Mini14.jpg', alt: 'Mini Villa 5' },
   ];
 
   return (
-    <div className="relative w-full bg-[#F3F4F6] min-h-screen overflow-x-hidden font-poppins">
+    <div className="relative w-full bg-[#F8F9FA] min-h-screen overflow-x-hidden font-poppins">
       
-      {/* --- NAVIGATION DRAWER & BLUR OVERLAY --- */}
+      {/* --- ADDED: FULL-SCREEN IMAGE MODAL --- */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 lg:p-12 animate-fade-in cursor-zoom-out"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button 
+            onClick={() => setSelectedImage(null)} 
+            className="absolute top-6 right-6 lg:top-10 lg:right-10 text-white/70 hover:text-white transition-colors"
+          >
+            <X size={32} />
+          </button>
+          <img 
+            src={selectedImage} 
+            alt="Full screen view" 
+            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl animate-fade-in-up cursor-default" 
+            onClick={(e) => e.stopPropagation()} // Prevents closing when clicking exactly on the image
+          />
+        </div>
+      )}
+
+      {/* --- NAVIGATION DRAWER --- */}
       {isNavOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-all duration-300"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-all duration-300"
           onClick={() => setIsNavOpen(false)}
         />
       )}
 
-      {/* Sidebar Drawer */}
-      <div className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 ease-in-out ${isNavOpen ? 'translate-x-0' : '-translate-x-full'} bg-black/30 backdrop-blur-xl border-r border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)]`}>
+      <div className={`fixed top-0 right-0 lg:left-0 lg:right-auto h-full w-64 z-[60] transform transition-transform duration-300 ease-in-out ${isNavOpen ? 'translate-x-0' : 'translate-x-full lg:-translate-x-full'} bg-white lg:bg-black/30 lg:backdrop-blur-xl lg:border-r lg:border-white/10 shadow-2xl flex flex-col`}>
         <div className="p-6 flex flex-col h-full">
-          <button onClick={() => setIsNavOpen(false)} className="self-end text-white/70 hover:text-white mb-8 transition-colors">
-            <X size={24} />
-          </button>
-          <nav className="flex flex-col gap-6 text-gray-400">
-            <button onClick={() => scrollToSection('home')} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
+          <div className="flex justify-between lg:justify-end items-center mb-8">
+            <span className="lg:hidden font-bold text-[#C98A1E] tracking-widest uppercase text-sm">Menu</span>
+            <button onClick={() => setIsNavOpen(false)} className="text-gray-400 lg:text-white/70 hover:text-gray-800 lg:hover:text-white transition-colors">
+              <X size={24} />
+            </button>
+          </div>
+          <nav className="flex flex-col gap-4 lg:gap-6 text-gray-500 lg:text-gray-400 font-medium lg:font-normal">
+            <button onClick={() => scrollToSection('home')} className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:bg-orange-50 lg:hover:bg-transparent lg:hover:text-white hover:text-[#C98A1E] transition-colors focus:text-[#C98A1E] lg:focus:text-white lg:focus:font-semibold">
               <HomeIcon size={20} /> <span className="text-sm">Home</span>
             </button>
-            <button onClick={() => scrollToSection('about')} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
+            <button onClick={() => scrollToSection('about')} className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:bg-orange-50 lg:hover:bg-transparent lg:hover:text-white hover:text-[#C98A1E] transition-colors focus:text-[#C98A1E] lg:focus:text-white lg:focus:font-semibold">
               <TreePine size={20} /> <span className="text-sm">About Us</span>
             </button>
-            <button onClick={() => scrollToSection('booking')} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
+            <button onClick={() => navigate('/booking')} className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:bg-orange-50 lg:hover:bg-transparent lg:hover:text-white hover:text-[#C98A1E] transition-colors focus:text-[#C98A1E] lg:focus:text-white lg:focus:font-semibold lg:text-white lg:font-semibold">
               <CalendarDays size={20} /> <span className="text-sm">Book Now</span>
             </button>
-            {/* CHANGED: Opens the modal and closes the drawer */}
+            <div className="lg:hidden w-full h-px bg-gray-100 my-2"></div>
             <button 
-              onClick={() => {
-                setIsNavOpen(false);
-                setIsLoginOpen(true);
-              }} 
-              className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4"
+              onClick={() => { setIsNavOpen(false); setIsLoginOpen(true); }} 
+              className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:bg-orange-50 lg:hover:bg-transparent lg:hover:text-white hover:text-[#C98A1E] transition-colors focus:text-[#C98A1E] lg:focus:text-white lg:focus:font-semibold lg:mt-4"
             >
-              <LogIn size={20} /> <span className="text-sm">Sign In</span>
+              <LogIn size={20} /> <span className="text-sm">Admin Access</span>
             </button>
           </nav>
         </div>
       </div>
 
-      {/* ADDED: Login Modal Instance */}
-      <LoginModal 
-        isOpen={isLoginOpen} 
-        onClose={() => setIsLoginOpen(false)} 
-      />
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
       {/* --- 1. HERO SECTION --- */}
-      <section id="home" ref={heroRef} className="relative h-screen w-full overflow-hidden flex flex-col justify-center px-8">
+      <section id="home" ref={heroRef} className="relative h-screen w-full flex flex-col justify-center lg:justify-between overflow-hidden lg:px-16 xl:px-24">
+        
+        <button 
+          onClick={() => setIsNavOpen(true)}
+          className="lg:hidden fixed top-6 left-6 z-40 p-2.5 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white shadow-lg hover:bg-black/40 transition-all"
+        >
+          <Menu size={24} />
+        </button>
+
+        <header className="hidden lg:flex relative z-40 w-full pt-8 justify-end items-center">
+          <button 
+            onClick={() => setIsNavOpen(true)} 
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white px-5 py-2.5 rounded-full transition-all text-sm font-medium tracking-wide shadow-lg"
+          >
+            <Menu size={16} /> Menu
+          </button>
+        </header>
+
         <motion.div 
           className="absolute inset-0 z-0"
           style={{ scale: backgroundScale }}
@@ -123,114 +156,145 @@ export default function LandingPage() {
           <img 
             src={bgImage} 
             alt="Balai 88 Pool" 
-            className="w-full h-full object-cover brightness-75"
+            className="w-full h-full object-cover lg:brightness-95"
           />
+          <div className="absolute inset-0 bg-black/30 lg:bg-gradient-to-b lg:from-black/40 lg:via-transparent lg:to-black/50"></div>
         </motion.div>
-        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-[#F3F4F6] via-[#F3F4F6]/70 to-transparent z-0 pointer-events-none"></div>
+        
+        <div className="absolute inset-x-0 bottom-0 h-[40%] lg:h-[35%] bg-gradient-to-t from-[#F8F9FA] via-[#F8F9FA]/90 to-transparent z-0 pointer-events-none"></div>
 
-        <button 
-          onClick={() => setIsNavOpen(true)}
-          className="fixed top-6 left-6 z-40 p-2.5 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white shadow-lg hover:bg-black/40 transition-all"
-        >
-          <Menu size={24} />
-        </button>
+        <motion.div className="relative z-10 px-8 lg:px-0 flex flex-col lg:flex-row lg:justify-between lg:items-end w-full h-full pb-16 lg:pb-20 pt-20 lg:pt-0" style={{ opacity: textOpacity }}>
+          
+          <div className="max-w-2xl flex flex-col justify-center h-full w-full lg:pb-12">
 
-        <motion.div className="relative z-10" style={{ opacity: textOpacity }}>
-          <h1 className="text-4xl text-white font-light leading-tight mb-4 drop-shadow-md">
-            Your private <br/> retreat for <br/> 
-            <span className="font-serif italic font-bold">rest and <br/> relaxation.</span>
-          </h1>
-          <div className="w-16 h-px bg-white mb-4 drop-shadow-md"></div>
-          <p className="text-white text-xs font-medium tracking-wide mb-8 drop-shadow-md">
-            A TRANQUIL AND SECLUDED VILLA <br/> WHERE YOU CAN TRULY UNWIND.
-          </p>
-          <button onClick={() => navigate('/booking')} className="bg-[#D4B07A] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#c29f68] transition-colors shadow-lg">
-            Book Your Stay →
-          </button>
+            <h1 className="text-[2.75rem] lg:text-[4rem] text-white font-light leading-[1.05] mb-2 lg:mb-6 drop-shadow-md mt-auto lg:mt-0">
+              Your private <br/>
+              retreat for <br/>
+              <span className="font-serif italic font-bold text-white">rest and <br className="lg:hidden"/> relaxation.</span>
+            </h1>
+
+            <div className="w-[85%] h-px bg-white mb-2 drop-shadow-md lg:hidden"></div>
+
+            <p className="text-white text-[10px] lg:text-base max-w-md font-medium tracking-wide lg:tracking-normal mb-6 lg:mb-0 drop-shadow-md uppercase lg:normal-case lg:leading-relaxed">
+              A tranquil and secluded villa <br className="hidden lg:block"/> where you can truly unwind.
+            </p>
+
+            <div className="flex lg:hidden items-center gap-3 mb-auto">
+              <button 
+                onClick={() => navigate('/booking')} 
+                className="bg-[#C98A1E] text-white px-6 py-2.5 rounded-full text-[13px] font-medium hover:bg-[#b57a18] transition-colors shadow-lg flex items-center gap-2"
+              >
+                Book Your Stay
+              </button>
+            </div>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-3 shrink-0 mb-2">
+            <button 
+              onClick={() => navigate('/booking')} 
+              className="bg-[#C98A1E] text-white px-8 py-4 rounded-full text-sm font-bold hover:bg-[#b57a18] transition-colors shadow-lg shadow-[#C98A1E]/20 mt-8"
+            >
+              Book Your Stay
+            </button>
+          </div>
         </motion.div>
       </section>
 
       {/* --- 2. ABOUT US SECTION --- */}
-        <section id="about" className="px-6 pt-16 pb-8 bg-[#F3F4F6]">        <h2 className="text-4xl text-gray-900 font-light mb-4">
-          Discover True <br/> <span className="font-serif italic font-bold">Tranquility.</span>
-        </h2>
-        <p className="text-sm text-gray-600 mb-8">
-          Rest, relax, and recharge in our peaceful hideaway.
-        </p>
+      <section id="about" className="px-6 lg:px-16 pt-16 lg:pt-24 pb-8 lg:pb-16 bg-[#F8F9FA]">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 lg:gap-20">
+          <div className="lg:w-1/3">
+            <h2 className="text-4xl lg:text-5xl text-gray-900 font-light mb-4 lg:mb-6 leading-tight">
+              Discover True <br/> <span className="font-serif italic font-bold text-[#C98A1E]">Tranquility.</span>
+            </h2>
+            <p className="text-sm lg:text-base text-gray-600 mb-8 lg:leading-relaxed">
+              Step away from the noise and step into serenity. Balai 88 is thoughtfully designed for those seeking a peaceful escape, offering complete seclusion in a beautiful, tranquil setting.
+            </p>
+          </div>
 
-       {/* Main Villa Carousel */}
-        <div className="mb-10">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4 pl-2 border-l-2 border-[#D4B07A]">Main Villa</h3>
-          <div className="w-full relative">
-             <Carousel>
-               {mainVillaImages.map((img) => (
-                 <div key={img.id} className="w-28 h-36 shrink-0 rounded-2xl overflow-hidden shadow-md">
-                   <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
-                 </div>
-               ))}
-             </Carousel>
+          <div className="lg:w-2/3 flex flex-col gap-12">
+            <div>
+              <h3 className="text-sm lg:text-base font-bold uppercase tracking-widest text-gray-800 mb-6 pl-4 border-l-2 border-[#C98A1E]">Main Villa</h3>
+              <Carousel>
+                {mainVillaImages.map((img) => (
+                  <div 
+                    key={img.id} 
+                    onClick={() => setSelectedImage(img.src)} // <-- ADDED: Click handler
+                    className="w-40 h-52 lg:w-48 lg:h-64 shrink-0 rounded-[2rem] overflow-hidden shadow-sm transition-transform hover:scale-[1.02] cursor-zoom-in snap-center"
+                  >
+                    <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </Carousel>
+            </div>
+
+            <div>
+              <h3 className="text-sm lg:text-base font-bold uppercase tracking-widest text-gray-800 mb-6 pl-4 border-l-2 border-[#C98A1E]">Mini Villa</h3>
+              <Carousel>
+                {miniVillaImages.map((img) => (
+                  <div 
+                    key={img.id} 
+                    onClick={() => setSelectedImage(img.src)} // <-- ADDED: Click handler
+                    className="w-40 h-52 lg:w-48 lg:h-64 shrink-0 rounded-[2rem] overflow-hidden shadow-sm transition-transform hover:scale-[1.02] cursor-zoom-in snap-center"
+                  >
+                    <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </Carousel>
+            </div>
           </div>
         </div>
-
-        {/* Mini Villa Carousel */}
-        <div className="mb-8">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4 pl-2 border-l-2 border-[#D4B07A]">Mini Villa</h3>
-          <div className="w-full relative">
-             <Carousel>
-               {miniVillaImages.map((img) => (
-                 <div key={img.id} className="w-28 h-36 shrink-0 rounded-2xl overflow-hidden shadow-md">
-                   <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
-                 </div>
-               ))}
-             </Carousel>
-          </div>
-        </div>
-
-        <p className="text-sm text-gray-600 mt-8 leading-relaxed">
-          Step away from the noise and step into serenity. Balai 88 is thoughtfully designed for those seeking a peaceful escape, offering complete seclusion in a beautiful, tranquil setting.
-        </p>
       </section>
 
       {/* --- 3. FINAL/BOOKING SECTION --- */}
-        <section id="booking" className="px-6 pt-4 pb-16 bg-[#F3F4F6]">        <p className="text-xs text-gray-500 font-medium mb-4">
-          Find the ideal spot for your relaxation.
-        </p>
-        <h2 className="text-2xl text-gray-900 font-medium leading-snug mb-8">
-          Designed for absolute peace and connection. Experience a secluded villa retreat where every detail inspires rest and relaxation.
-        </h2>
+      <section id="booking" className="px-6 lg:px-16 pt-8 lg:pt-16 pb-16 lg:pb-24 bg-[#F8F9FA]">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+          
+          <div className="lg:w-1/2">
+            <p className="text-xs lg:text-sm text-[#C98A1E] font-bold tracking-widest uppercase mb-4">
+              Find the ideal spot
+            </p>
+            <h2 className="text-3xl lg:text-4xl text-gray-900 font-medium leading-snug mb-8 lg:mb-12">
+              Experience a secluded villa retreat where every detail inspires rest.
+            </h2>
 
-        {/* Bullet Points with Updated Icons */}
-        <div className="flex flex-col gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#D4B07A]/40 flex items-center justify-center shrink-0">
-               <HomeIcon size={18} className="text-[#967444]" />
+            <div className="flex flex-col gap-4 lg:gap-6 mb-8 lg:mb-10">
+              <div className="flex items-center gap-5 bg-white p-4 lg:p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div className="w-12 h-12 rounded-xl bg-[#C98A1E]/10 flex items-center justify-center shrink-0">
+                   <HomeIcon size={20} className="text-[#C98A1E]" />
+                </div>
+                <span className="text-gray-800 font-bold lg:text-lg">Exclusive Villa Access</span>
+              </div>
+              <div className="flex items-center gap-5 bg-white p-4 lg:p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div className="w-12 h-12 rounded-xl bg-[#C98A1E]/10 flex items-center justify-center shrink-0">
+                   <Leaf size={20} className="text-[#C98A1E]" />
+                </div>
+                <span className="text-gray-800 font-bold lg:text-lg">Tranquil Environment</span>
+              </div>
+              <div className="flex items-center gap-5 bg-white p-4 lg:p-5 rounded-2xl shadow-sm border border-gray-100">
+                 <div className="w-12 h-12 rounded-xl bg-[#C98A1E]/10 flex items-center justify-center shrink-0">
+                   <Sparkles size={20} className="text-[#C98A1E]" />
+                 </div>
+                <span className="text-gray-800 font-bold lg:text-lg">Curated Relaxation</span>
+              </div>
             </div>
-            <span className="text-gray-800 font-medium">Exclusive Villa Access</span>
+            
+            <button onClick={() => navigate('/booking')} className="hidden lg:block bg-[#C98A1E] text-white px-10 py-4 rounded-full text-base font-bold hover:bg-[#b57a18] transition-colors shadow-lg shadow-[#C98A1E]/20 mt-8">
+              Book Your Stay
+            </button>
           </div>
+
+          <div className="w-full lg:w-1/2 h-[300px] lg:h-[600px] bg-white rounded-[2rem] lg:rounded-[3rem] shadow-xl overflow-hidden relative group">
+            <img src={bgImage} alt="Overall Balai 88" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>
+          </div>
+
+          <button onClick={() => navigate('/booking')} className="lg:hidden w-full bg-[#C98A1E] text-white px-6 py-4 rounded-full text-sm font-bold shadow-lg flex items-center justify-center gap-2">
+            Book Your Stay
+          </button>
           
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#D4B07A]/60 flex items-center justify-center shrink-0">
-               <Leaf size={18} className="text-[#967444]" />
-            </div>
-            <span className="text-gray-800 font-medium">Tranquil Environment</span>
-          </div>
-          
-          <div className="flex items-center gap-4">
-             <div className="w-10 h-10 rounded-full bg-[#D4B07A]/80 flex items-center justify-center shrink-0">
-               <Sparkles size={18} className="text-[#967444]" />
-             </div>
-            <span className="text-gray-800 font-medium">Curated Relaxation</span>
-          </div>
         </div>
-
-        <div className="w-full h-64 bg-white rounded-2xl shadow-sm mb-8 overflow-hidden">
-          <img src={bgImage} alt="Overall Balai 88" className="w-full h-full object-cover" />        </div>
-
-        <button onClick={() => navigate('/booking')} className="bg-[#D4B07A] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#c29f68] transition-colors shadow-lg">
-          Book Your Stay →
-        </button>
       </section>
-
     </div>
   );
 }
