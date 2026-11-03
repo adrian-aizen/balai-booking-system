@@ -48,6 +48,17 @@ const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
   </div>
 );
 
+const [promos, setPromos] = useState([]);
+
+useEffect(() => {
+  getDocs(collection(db, 'promotions')).then((snap) =>
+    setPromos(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  );
+}, []);
+
+const promo = getActivePromo(promos, checkIn, villaType, subtotal);
+const { discount, total } = applyPromo(subtotal, promo);
+
 export default function BookingForm() {
   const navigate = useNavigate();
   const [isNavOpen, setIsNavOpen] = useState(false);

@@ -1,20 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Percent, Bell as LucideBell } from 'lucide-react';
-
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { getActivePromo } from '../../utils/promos';
+ 
 export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
   const [selectedVilla, setSelectedVilla] = useState('Main Villa');
   const [isFullMonthView, setIsFullMonthView] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth] = useState(new Date()); 
-
+  const [promos, setPromos] = useState([]);
+ 
+  // Live list of promos from Firestore (collection name must match PromoCreation)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'promotions'), (snapshot) => {
+      setPromos(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsubscribe;
+  }, []);
+ 
   // --- Date Math Helpers ---
   const formatYYYYMMDD = (date) => {
     const d = new Date(date);
     return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
   };
-
+ 
   const isSameDay = (date1, date2) => formatYYYYMMDD(date1) === formatYYYYMMDD(date2);
-
+ 
   const getWeekDays = (date) => {
     const start = new Date(date);
     start.setDate(start.getDate() - start.getDay());
@@ -24,7 +36,7 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
       return day;
     });
   };
-
+ 
   const getMonthDays = (year, month) => {
     const date = new Date(year, month, 1);
     const days = [];
@@ -35,12 +47,13 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
     }
     return days;
   };
-
+ 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-
+ 
   // --- Live Data Calculations ---
   const selectedDateStr = formatYYYYMMDD(selectedDate);
+  const activePromo = getActivePromo(promos, selectedDateStr, selectedVilla);
   const todaysSchedule = bookings.filter(b => b.villaType === selectedVilla && (b.checkIn === selectedDateStr || b.checkOut === selectedDateStr));
   
   const hasActivity = (date) => {
@@ -48,10 +61,10 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
     const dateStr = formatYYYYMMDD(date);
     return bookings.some(b => b.villaType === selectedVilla && (b.checkIn === dateStr || b.checkOut === dateStr));
   };
-
+ 
   const weekDays = getWeekDays(selectedDate);
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
-
+ 
   return (
     <div className="w-full bg-[#F8F9FA] font-poppins pb-20 animate-fade-in">
       {/* Responsive Container */}
@@ -67,7 +80,7 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
             {pendingCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 lg:w-3.5 lg:h-3.5 bg-red-500 border-2 border-[#F8F9FA] rounded-full shadow-sm animate-pulse"></span>}
           </button>
         </header>
-
+ 
         {/* Title & Villa Toggles (Side by Side on Desktop) */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-6 lg:mb-10 gap-6">
           <div>
@@ -89,7 +102,7 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
             ))}
           </div>
         </div>
-
+ 
         {/* Desktop Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           
@@ -110,13 +123,13 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
                   {isFullMonthView ? 'Collapse' : 'View Full'}
                 </button>
               </div>
-
+ 
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {dayNames.map(day => (
                   <div key={day} className="text-center text-[9px] lg:text-xs font-bold text-gray-400 uppercase">{day}</div>
                 ))}
               </div>
-
+ 
               {!isFullMonthView ? (
                 <div className="grid grid-cols-7 gap-1 lg:gap-2 relative">
                   {weekDays.map((date, i) => {
@@ -161,26 +174,32 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
               )}
             </div>
           </div>
-
+ 
           {/* Right Column: Daily Schedule */}
           <div className="lg:col-span-5 xl:col-span-4">
             <p className="text-[10px] lg:text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">Daily Schedule</p>
             <h3 className="text-lg lg:text-xl font-medium text-gray-400 mb-4 lg:mb-6">
               <span className="font-bold text-[#C98A1E]">{dayNames[selectedDate.getDay()]}</span> {monthNames[selectedDate.getMonth()]} {selectedDate.getDate()}
             </h3>
-
+ 
             <div className="space-y-4">
-              <div className="bg-[#FDF3E1] border border-[#F5E1C8] rounded-3xl p-5 lg:p-6 flex items-center shadow-sm">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-[#F5D8A9] flex items-center justify-center mr-4 shrink-0 shadow-inner">
-                  <Percent size={20} className="text-[#967444]" />
+              {activePromo && (
+                <div className="bg-[#FDF3E1] border border-[#F5E1C8] rounded-3xl p-5 lg:p-6 flex items-center gap-4 shadow-sm">
+                  <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-[#F5D8A9] flex items-center justify-center shrink-0 shadow-inner">
+                    <Percent size={20} className="text-[#967444]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[9px] lg:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 lg:mb-1">Active Promo</p>
+                    <p className="truncate text-sm lg:text-base font-bold text-gray-900">{activePromo.title}</p>
+                  </div>
+                  <span className="shrink-0 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] lg:text-[10px] font-bold uppercase tracking-widest border border-emerald-200 shadow-sm">
+                    {activePromo.discountType === 'percentage'
+                      ? `${activePromo.discountValue}% OFF`
+                      : `₱${activePromo.discountValue} OFF`}
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <p className="text-[9px] lg:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 lg:mb-1">Active Promo</p>
-                  <p className="text-sm lg:text-base font-bold text-gray-900">Christmas Promo</p>
-                </div>
-                <span className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] lg:text-[10px] font-bold uppercase tracking-widest border border-emerald-200 shadow-sm">10% OFF</span>
-              </div>
-
+              )}
+ 
               {todaysSchedule.length === 0 ? (
                 <p className="text-xs lg:text-sm text-gray-400 text-center py-10 lg:py-12 border-2 border-dashed border-gray-300 rounded-3xl font-medium bg-white/50">No check-ins or check-outs today.</p>
               ) : (

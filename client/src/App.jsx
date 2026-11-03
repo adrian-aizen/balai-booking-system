@@ -10,7 +10,6 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/booking" element={<BookingForm />} />
-        {/* The /admin route has been removed */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/admin-promotions" element={<PromoCreation />} />
       </Routes>

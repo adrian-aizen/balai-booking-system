@@ -8,6 +8,7 @@ import AdminNavbar from '../ui/AdminNavbar';
 import NotificationsModal from '../ui/NotificationModal';
 import ManualBookingModal from '../ui/ManualBooking'; // Ensure this matches your file name
 import balaiLogo from '../../assets/BalaiLogo.svg';
+import PromoCreation from './PromoCreation';
 
 const GOLD = "#B97216";
 const GOLD_DEEP = "#C98A1E";
@@ -143,7 +144,12 @@ const AdminDashboard = () => {
             />
           </div>
         ) : view === 'promos' ? (
-          <div className="w-full px-5 pt-10 text-center text-gray-500 mt-20">Promos Dashboard Coming Soon</div>
+          <div className="w-full flex justify-center">
+            <PromoCreation
+              onOpenNotif={() => setIsNotifOpen(true)}
+              pendingCount={pendingBookings.length}
+            />
+          </div>
         ) : (
           /* RESPONSIVE DASHBOARD LAYOUT */
           <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 pt-10 lg:pt-14">
