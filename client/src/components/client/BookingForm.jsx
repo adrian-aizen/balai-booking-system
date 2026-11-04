@@ -4,6 +4,7 @@ import { User, Mail, Phone, CalendarDays, Home as HomeIcon, Users, Check, X, Tre
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import MoltenMetal from '../ui/MoltenMetal'; 
+import LoginModal from '../ui/LoginModal'; 
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -75,6 +76,7 @@ const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
 export default function BookingForm() {
   const navigate = useNavigate();
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successData, setSuccessData] = useState({ show: false, refId: '' });
   
@@ -107,7 +109,6 @@ export default function BookingForm() {
         snapshot.forEach(doc => {
           const data = doc.data();
           
-          // FIX: Explicitly parse YYYY-MM-DD components to enforce local timezone midnight
           const [inYear, inMonth, inDay] = data.checkIn.split('-').map(Number);
           const start = new Date(inYear, inMonth - 1, inDay);
           
@@ -221,6 +222,8 @@ export default function BookingForm() {
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden font-poppins flex flex-col items-center justify-center pt-24 lg:pt-0 pb-12 px-6 lg:px-20">
 
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
       {successData.show && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-6 animate-fade-in">
           <div className="bg-white rounded-[32px] p-8 lg:p-10 max-w-sm w-full text-center shadow-2xl animate-fade-in-up">
@@ -291,9 +294,15 @@ export default function BookingForm() {
             <button onClick={() => setIsNavOpen(false)} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold text-white font-semibold">
               <CalendarDays size={20} /> <span className="text-sm">Book Now</span>
             </button>
-            <button className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4">
-              <LogIn size={20} /> <span className="text-sm">Sign In</span>
+            
+            {/* UPDATED: Changed from "Sign In" to "Admin Access" */}
+            <button 
+              onClick={() => { setIsNavOpen(false); setIsLoginOpen(true); }}
+              className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4"
+            >
+              <LogIn size={20} /> <span className="text-sm">Admin Access</span>
             </button>
+
           </nav>
         </div>
       </div>
