@@ -1,13 +1,35 @@
 import { useState } from 'react';
-import { Percent, Bell as LucideBell } from 'lucide-react';
+import { Percent, Bell as LucideBell, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
   const [selectedVilla, setSelectedVilla] = useState('Main Villa');
   const [isFullMonthView, setIsFullMonthView] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [currentMonth] = useState(new Date()); 
+  
+  const [currentMonth, setCurrentMonth] = useState(new Date()); 
 
-  // --- Date Math Helpers ---
+  const handlePrev = () => {
+    if (isFullMonthView) {
+      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    } else {
+      const newDate = new Date(selectedDate);
+      newDate.setDate(selectedDate.getDate() - 7);
+      setSelectedDate(newDate);
+      setCurrentMonth(newDate); 
+    }
+  };
+
+  const handleNext = () => {
+    if (isFullMonthView) {
+      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    } else {
+      const newDate = new Date(selectedDate);
+      newDate.setDate(selectedDate.getDate() + 7);
+      setSelectedDate(newDate);
+      setCurrentMonth(newDate);
+    }
+  };
+
   const formatYYYYMMDD = (date) => {
     const d = new Date(date);
     return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
@@ -39,14 +61,16 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-  // --- Live Data Calculations ---
   const selectedDateStr = formatYYYYMMDD(selectedDate);
   const todaysSchedule = bookings.filter(b => b.villaType === selectedVilla && (b.checkIn === selectedDateStr || b.checkOut === selectedDateStr));
   
-  const hasActivity = (date) => {
-    if (!date) return false;
+  const getDayActivities = (date) => {
+    if (!date) return { hasCheckIn: false, hasCheckOut: false };
     const dateStr = formatYYYYMMDD(date);
-    return bookings.some(b => b.villaType === selectedVilla && (b.checkIn === dateStr || b.checkOut === dateStr));
+    return {
+      hasCheckIn: bookings.some(b => b.villaType === selectedVilla && b.checkIn === dateStr),
+      hasCheckOut: bookings.some(b => b.villaType === selectedVilla && b.checkOut === dateStr)
+    };
   };
 
   const weekDays = getWeekDays(selectedDate);
@@ -54,10 +78,8 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
 
   return (
     <div className="w-full bg-[#F8F9FA] font-poppins pb-20 animate-fade-in">
-      {/* Responsive Container */}
       <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 pt-10 lg:pt-14">
         
-        {/* Header with Notification Bell */}
         <header className="flex items-center justify-end mb-4 lg:mb-8">
           <button 
             onClick={onOpenNotif} 
@@ -68,7 +90,6 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
           </button>
         </header>
 
-        {/* Title & Villa Toggles (Side by Side on Desktop) */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-6 lg:mb-10 gap-6">
           <div>
             <h2 className="text-[10px] lg:text-xs font-bold tracking-widest text-gray-500 uppercase mb-1">Balai 88</h2>
@@ -90,22 +111,28 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
           </div>
         </div>
 
-        {/* Desktop Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           
           {/* Left Column: Calendar Card */}
           <div className="lg:col-span-7 xl:col-span-8">
-            <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm h-full">
-              <div className="flex justify-between items-center mb-6 lg:mb-8">
+            <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm h-full flex flex-col">
+              
+              <div className="flex justify-between items-start lg:items-center mb-6 lg:mb-8">
                 <div>
                   <p className="text-[10px] lg:text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">{isFullMonthView ? 'Full Month' : 'This Week'}</p>
-                  <h3 className="text-xl lg:text-2xl font-bold text-[#C98A1E]">
+                  <h3 className="text-xl lg:text-2xl font-bold text-[#C98A1E] mt-1 min-w-[160px]">
                     {monthNames[isFullMonthView ? currentMonth.getMonth() : selectedDate.getMonth()]} {isFullMonthView ? currentMonth.getFullYear() : selectedDate.getFullYear()}
                   </h3>
                 </div>
+
                 <button 
-                  onClick={() => setIsFullMonthView(!isFullMonthView)}
-                  className="px-4 py-2 lg:py-2.5 rounded-full border border-[#C98A1E] text-[#C98A1E] text-[9px] lg:text-[10px] font-bold uppercase tracking-wider bg-[#C98A1E]/10 hover:bg-[#C98A1E] hover:text-white transition-colors"
+                  onClick={() => {
+                    setIsFullMonthView(!isFullMonthView);
+                    if (!isFullMonthView) {
+                      setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+                    }
+                  }}
+                  className="px-4 py-2 lg:py-2.5 rounded-full border border-[#C98A1E] text-[#C98A1E] text-[9px] lg:text-[10px] font-bold uppercase tracking-wider bg-[#C98A1E]/10 hover:bg-[#C98A1E] hover:text-white transition-colors whitespace-nowrap mt-4 lg:mt-0"
                 >
                   {isFullMonthView ? 'Collapse' : 'View Full'}
                 </button>
@@ -118,10 +145,10 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
               </div>
 
               {!isFullMonthView ? (
-                <div className="grid grid-cols-7 gap-1 lg:gap-2 relative">
+                <div className="grid grid-cols-7 gap-1 lg:gap-2 relative flex-1">
                   {weekDays.map((date, i) => {
                     const isSelected = isSameDay(date, selectedDate);
-                    const hasDot = hasActivity(date);
+                    const activities = getDayActivities(date);
                     return (
                       <button 
                         key={i}
@@ -129,16 +156,19 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
                         className={`flex flex-col items-center py-3 lg:py-5 rounded-2xl lg:rounded-3xl transition-all ${isSelected ? 'bg-[#C98A1E] text-white shadow-md scale-105' : 'text-gray-700 hover:bg-gray-50'}`}
                       >
                         <span className="text-lg lg:text-2xl font-bold">{date.getDate()}</span>
-                        <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full mt-1.5 lg:mt-2 ${isSelected ? 'bg-white' : hasDot ? 'bg-emerald-500' : 'bg-transparent'}`}></span>
+                        <div className="flex gap-1 mt-1.5 lg:mt-2 h-2">
+                          {activities.hasCheckIn && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-emerald-500'}`}></span>}
+                          {activities.hasCheckOut && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`}></span>}
+                        </div>
                       </button>
                     );
                   })}
                 </div>
               ) : (
-                <div className="grid grid-cols-7 gap-1 border-t border-l border-gray-100">
+                <div className="grid grid-cols-7 gap-1 border-t border-l border-gray-100 flex-1">
                   {monthDays.map((date, i) => {
                     const isSelected = date && isSameDay(date, selectedDate);
-                    const hasDot = date && hasActivity(date);
+                    const activities = getDayActivities(date);
                     return (
                       <button 
                         key={i}
@@ -151,7 +181,10 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
                             <span className={`text-xs lg:text-sm font-bold ${isSelected ? 'w-7 h-7 lg:w-9 lg:h-9 bg-[#C98A1E] text-white rounded-full flex items-center justify-center shadow-sm' : 'text-gray-700'}`}>
                               {date.getDate()}
                             </span>
-                            {hasDot && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500 mt-1.5 absolute bottom-2 lg:bottom-4"></span>}
+                            <div className="flex gap-1 absolute bottom-2 lg:bottom-4 h-2">
+                              {activities.hasCheckIn && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500"></span>}
+                              {activities.hasCheckOut && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-blue-500"></span>}
+                            </div>
                           </>
                         )}
                       </button>
@@ -159,6 +192,34 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
                   })}
                 </div>
               )}
+
+              {/* Bottom Footer: Navigation Arrows & Calendar Legend */}
+              <div className="flex justify-between items-center mt-6 pt-5 border-t border-gray-100 w-full">
+                
+                {/* Arrow Navigation */}
+                <div className="flex gap-2">
+                  <button onClick={handlePrev} className="w-8 h-8 lg:w-9 lg:h-9 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors shadow-sm border border-gray-200">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button onClick={handleNext} className="w-8 h-8 lg:w-9 lg:h-9 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors shadow-sm border border-gray-200">
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+
+                {/* Legend */}
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span className="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Confirmed</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                    <span className="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Departing</span>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
           </div>
 
@@ -200,8 +261,9 @@ export default function AdminCalendar({ bookings, onOpenNotif, pendingCount }) {
                         <p className="text-sm lg:text-base font-bold text-gray-900 mb-0.5 lg:mb-1">{booking.guestName}</p>
                         <p className="text-[10px] lg:text-xs text-neutral-500 font-medium">{booking.people} Pax</p>
                       </div>
+                      
                       <span className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-[9px] lg:text-[10px] font-bold uppercase tracking-widest border shadow-sm ${
-                        isCheckIn ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-transparent text-gray-800 border-gray-200'
+                        isCheckIn ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-blue-50 text-blue-600 border-blue-200'
                       }`}>
                         {isCheckIn ? 'Confirmed' : 'Departing'}
                       </span>
