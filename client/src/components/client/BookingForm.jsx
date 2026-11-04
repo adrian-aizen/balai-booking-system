@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, CalendarDays, Home as HomeIcon, Users, Check, X, TreePine, LogIn } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import MoltenMetal from '../ui/MoltenMetal'; 
+import LoginModal from '../ui/LoginModal'; 
 
-const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, min, max, compact, maxLength, pattern, title }) => (
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, maxLength, pattern, title, compact }) => (
   <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 ${compact ? 'px-2' : 'px-3'}`}>
     <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-auto' : 'w-20'}`}>
       <Icon size={14} className={`text-[#C98A1E] shrink-0 ${compact ? 'mr-1' : 'mr-1.5'}`} />
@@ -18,13 +22,34 @@ const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, pl
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      min={min}
-      max={max} 
       maxLength={maxLength}
       pattern={pattern}
       title={title}
       required
       className="bg-transparent flex-1 outline-none text-xs text-gray-800 font-medium w-full min-w-0" 
+    />
+  </div>
+);
+
+const DatePickerField = ({ icon: Icon, label, selected, onChange, minDate, maxDate, excludeDates, disabled, placeholderText }) => (
+  <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 px-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+    <div className="flex items-center text-gray-400 shrink-0 w-20">
+      <Icon size={14} className="text-[#C98A1E] shrink-0 mr-1.5" />
+      <span className="text-[11px] font-medium whitespace-nowrap">{label}</span>
+    </div>
+    <div className="w-px h-5 bg-gray-300 mx-2 shrink-0"></div>
+    <DatePicker
+      selected={selected}
+      onChange={onChange}
+      minDate={minDate}
+      maxDate={maxDate}
+      excludeDates={excludeDates}
+      dateFormat="MMMM d, yyyy"
+      placeholderText={placeholderText || "Select date"}
+      disabled={disabled}
+      className={`bg-transparent flex-1 outline-none text-xs text-gray-800 font-medium w-full min-w-0 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+      wrapperClassName="w-full flex-1"
+      required
     />
   </div>
 );
@@ -48,56 +73,84 @@ const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
   </div>
 );
 
-const [promos, setPromos] = useState([]);
-
-useEffect(() => {
-  getDocs(collection(db, 'promotions')).then((snap) =>
-    setPromos(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-  );
-}, []);
-
-const promo = getActivePromo(promos, checkIn, villaType, subtotal);
-const { discount, total } = applyPromo(subtotal, promo);
-
 export default function BookingForm() {
   const navigate = useNavigate();
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false); 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successData, setSuccessData] = useState({ show: false, refId: '' });
+  
+  const [bookedDates, setBookedDates] = useState([]);
+  const [activeBookings, setActiveBookings] = useState([]);
   
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     number: '',
-    checkIn: '',
-    checkOut: '',
+    checkIn: null,
+    checkOut: null,
     villaType: 'Main Villa',
     people: 1
   });
 
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const q = query(
+          collection(db, "bookings"),
+          where("villaType", "==", formData.villaType),
+          where("status", "in", ["pending", "confirmed"])
+        );
+        const snapshot = await getDocs(q);
+        
+        let allBlockedNights = [];
+        let bookings = [];
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          
+          const [inYear, inMonth, inDay] = data.checkIn.split('-').map(Number);
+          const start = new Date(inYear, inMonth - 1, inDay);
+          
+          const [outYear, outMonth, outDay] = data.checkOut.split('-').map(Number);
+          const end = new Date(outYear, outMonth - 1, outDay);
+          
+          bookings.push({ start, end });
+
+          let curr = new Date(start);
+          while (curr < end) {
+            allBlockedNights.push(new Date(curr));
+            curr.setDate(curr.getDate() + 1);
+          }
+        });
+
+        bookings.sort((a,b) => a.start - b.start);
+        setActiveBookings(bookings);
+        setBookedDates(allBlockedNights);
+        
+        setFormData(prev => ({ ...prev, checkIn: null, checkOut: null }));
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+      }
+    };
+    fetchBookings();
+  }, [formData.villaType]);
+
   const handleChange = (e) => {
     let { name, value } = e.target;
-    
-    if (name === "number") {
-      value = value.replace(/\D/g, ''); 
-    }
+    if (name === "number") value = value.replace(/\D/g, ''); 
 
     setFormData(prevData => {
       let updatedValue = value;
-      
       if (name === "people") {
         const maxPax = prevData.villaType === 'Main Villa' ? 25 : 10;
-        if (Number(value) > maxPax) {
-          updatedValue = maxPax; 
-        }
+        if (Number(value) > maxPax) updatedValue = maxPax; 
       }
-
       let updatedPeople = prevData.people;
       if (name === "villaType") {
         const newMaxPax = value === 'Main Villa' ? 25 : 10;
-        if (Number(prevData.people) > newMaxPax) {
-          updatedPeople = newMaxPax;
-        }
+        if (Number(prevData.people) > newMaxPax) updatedPeople = newMaxPax;
       }
-
       return {
         ...prevData,
         [name]: updatedValue,
@@ -106,39 +159,95 @@ export default function BookingForm() {
     });
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const handleDateChange = (name, date) => {
+    setFormData(prev => {
+      const updates = { [name]: date };
+      if (name === 'checkIn') {
+        updates.checkOut = null;
+      }
+      return { ...prev, ...updates };
+    });
+  };
+
+  let minCheckOut = new Date();
+  let maxCheckOut = null;
+  
+  if (formData.checkIn) {
+    minCheckOut = new Date(formData.checkIn);
+    minCheckOut.setDate(minCheckOut.getDate() + 1);
+
+    const checkInTime = new Date(formData.checkIn);
+    checkInTime.setHours(0,0,0,0);
+    
+    const nextBooking = activeBookings.find(b => b.start > checkInTime);
+    if (nextBooking) {
+      maxCheckOut = nextBooking.start;
+    }
+  }
+
+  const formatDateForDB = (dateObj) => {
+    if (!dateObj) return "";
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
+    if (!formData.checkIn || !formData.checkOut) return;
+    
+    setIsSubmitting(true);
     try {
       const docRef = await addDoc(collection(db, "bookings"), {
         guestName: formData.name,
         email: formData.email,
         phone: formData.number,
-        checkIn: formData.checkIn,
-        checkOut: formData.checkOut,
+        checkIn: formatDateForDB(formData.checkIn),
+        checkOut: formatDateForDB(formData.checkOut),
         villaType: formData.villaType,
         people: Number(formData.people),
         status: "pending",
         totalPrice: 0,
         createdAt: new Date().toISOString()
       });
-      alert("Booking successfully submitted! Reference ID: " + docRef.id);
-      navigate('/'); 
+      setSuccessData({ show: true, refId: docRef.id });
     } catch {
       alert("An error occurred while booking. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  const handleNav = (path) => {
-    setIsNavOpen(false);
-    navigate(path);
   };
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden font-poppins flex flex-col items-center justify-center pt-24 lg:pt-0 pb-12 px-6 lg:px-20">
 
-      {/* --- MATCHED ADMIN ACCENT COLOR & MOLTEN METAL --- */}
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {successData.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-6 animate-fade-in">
+          <div className="bg-white rounded-[32px] p-8 lg:p-10 max-w-sm w-full text-center shadow-2xl animate-fade-in-up">
+            <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-emerald-100">
+              <Check size={40} strokeWidth={3} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Sent!</h2>
+            <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+              Your booking request has been successfully submitted. We will contact you shortly to confirm your reservation.
+            </p>
+            <div className="bg-[#F8F9FA] rounded-2xl p-4 mb-8 border border-gray-100 shadow-sm">
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Reference ID</p>
+              <p className="text-sm font-mono font-bold text-[#C98A1E] break-all">{successData.refId}</p>
+            </div>
+            <button
+              onClick={() => navigate('/')}
+              className="w-full bg-[#C98A1E] text-white py-4 rounded-full font-bold text-sm shadow-md hover:bg-[#b57a18] transition-colors"
+            >
+              Return to Home
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="fixed inset-0 -z-10 bg-[#C98A1E]">
         <MoltenMetal
           colors={["#C98A1E","#ffffff"]}
@@ -163,7 +272,6 @@ export default function BookingForm() {
         />
       </div>
 
-      {/* --- NAVIGATION DRAWER & BLUR OVERLAY --- */}
       {isNavOpen && (
         <div 
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-all duration-300"
@@ -177,18 +285,24 @@ export default function BookingForm() {
             <X size={24} />
           </button>
           <nav className="flex flex-col gap-6 text-gray-400">
-            <button onClick={() => handleNav('/')} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
+            <button onClick={() => { setIsNavOpen(false); navigate('/'); }} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
               <HomeIcon size={20} /> <span className="text-sm">Home</span>
             </button>
-            <button onClick={() => handleNav('/#about')} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
+            <button onClick={() => { setIsNavOpen(false); navigate('/#about'); }} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold">
               <TreePine size={20} /> <span className="text-sm">About Us</span>
             </button>
             <button onClick={() => setIsNavOpen(false)} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold text-white font-semibold">
               <CalendarDays size={20} /> <span className="text-sm">Book Now</span>
             </button>
-            <button className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4">
-              <LogIn size={20} /> <span className="text-sm">Sign In</span>
+            
+            {/* UPDATED: Changed from "Sign In" to "Admin Access" */}
+            <button 
+              onClick={() => { setIsNavOpen(false); setIsLoginOpen(true); }}
+              className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4"
+            >
+              <LogIn size={20} /> <span className="text-sm">Admin Access</span>
             </button>
+
           </nav>
         </div>
       </div>
@@ -204,10 +318,8 @@ export default function BookingForm() {
         </div>
       </button>
 
-      {/* --- RESPONSIVE PAGE CONTENT --- */}
       <div className="w-full max-w-6xl relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
         
-        {/* Left Column: Hero Text */}
         <div className="w-full lg:w-1/2 drop-shadow-md text-center lg:text-left mt-8 lg:mt-0">
           <h1 className="text-4xl lg:text-6xl text-white font-light leading-tight mb-4 lg:mb-6">
             Your private <br className="hidden lg:block"/> retreat for <br className="hidden lg:block"/> 
@@ -219,7 +331,6 @@ export default function BookingForm() {
           </p>
         </div>
 
-        {/* Right Column: Booking Form Card */}
         <div className="bg-white/95 backdrop-blur-md w-full max-w-sm lg:max-w-md rounded-[32px] p-6 lg:p-8 shadow-2xl relative animate-fade-in-up shrink-0">          
           <button 
             onClick={() => navigate('/')} 
@@ -237,25 +348,45 @@ export default function BookingForm() {
             <FormField icon={Mail} label="Email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. jcruz@gmail.com" />
             <FormField icon={Phone} label="Number" type="tel" name="number" value={formData.number} onChange={handleChange} placeholder="e.g. 09123456789" maxLength="11" pattern="[0-9]{11}" title="Please enter an 11-digit mobile number"/>        
             
-            <FormField icon={CalendarDays} label="Check In" type="date" name="checkIn" value={formData.checkIn} onChange={handleChange} min={today} />
-            <FormField icon={CalendarDays} label="Check Out" type="date" name="checkOut" value={formData.checkOut} onChange={handleChange} min={formData.checkIn || today} />
-            
             <div className="flex gap-2">
                 <div className="flex-1 min-w-0">
                     <SelectField icon={HomeIcon} label="Villa" name="villaType" value={formData.villaType} onChange={handleChange} compact={true} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <FormField icon={Users} label="People" type="number" name="people" min="1" 
-                      max={formData.villaType === 'Main Villa' ? "25" : "10"} value={formData.people} onChange={handleChange} compact={true} />
+                    <FormField icon={Users} label="People" type="text" name="people" maxLength="2" value={formData.people} onChange={handleChange} compact={true} />
                 </div>
             </div>
 
+            <DatePickerField 
+              icon={CalendarDays} 
+              label="Check In" 
+              selected={formData.checkIn} 
+              onChange={(date) => handleDateChange('checkIn', date)} 
+              minDate={new Date()}
+              excludeDates={bookedDates}
+            />
+            
+            <DatePickerField 
+              icon={CalendarDays} 
+              label="Check Out" 
+              selected={formData.checkOut} 
+              onChange={(date) => handleDateChange('checkOut', date)} 
+              minDate={minCheckOut}
+              maxDate={maxCheckOut}
+              disabled={!formData.checkIn}
+              placeholderText={!formData.checkIn ? "Select Check In first" : "Select date"}
+            />
+
             <button 
               type="submit" 
-              className="mt-4 w-full bg-[#C98A1E] text-white py-3 lg:py-3 rounded-full font-medium text-sm shadow-md hover:bg-[#b57a18] transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+              disabled={isSubmitting}
+              className="mt-4 w-full lg:w-auto lg:px-8 bg-[#C98A1E] text-white py-3 lg:py-2.5 rounded-full font-medium text-sm shadow-md hover:bg-[#b57a18] transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <Check size={18} />
-              Book Now
+              {isSubmitting ? "Submitting..." : (
+                <>
+                  <Check size={18} /> Book Now
+                </>
+              )}
             </button>
           </form>
         </div>

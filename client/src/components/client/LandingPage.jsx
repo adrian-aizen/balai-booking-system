@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, X, Home as HomeIcon, TreePine, CalendarDays, LogIn, Leaf, Sparkles, ArrowUpRight } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
@@ -9,7 +9,9 @@ import LoginModal from '../ui/LoginModal';
 export default function LandingPage() {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null); // <-- ADDED: State for full-screen image
+  const [selectedImage, setSelectedImage] = useState(null); 
+  
+  const [activeSection, setActiveSection] = useState('home');
   
   const heroRef = useRef(null);
   const navigate = useNavigate();
@@ -21,12 +23,45 @@ export default function LandingPage() {
   const backgroundScale = useTransform(scrollYProgress, [0, 1], [1, 1.5]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ['home', 'about', 'booking'];
+      let current = 'home';
+      
+      for (const section of sections) {
+        const element = document.getElementById(section);
+        if (element) {
+          const { top } = element.getBoundingClientRect();
+          if (top <= window.innerHeight / 2) {
+            current = section;
+          }
+        }
+      }
+      setActiveSection(current);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); 
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const scrollToSection = (id) => {
     setIsNavOpen(false);
+    setActiveSection(id);
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-    const mainVillaImages = [
+  // UPDATED: Standardized colors so mobile uses the same dark theme as desktop
+  const getNavLinkClass = (section) => {
+    const isActive = activeSection === section;
+    return `flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none transition-colors ${
+      isActive 
+        ? 'text-white font-semibold' 
+        : 'text-gray-400 hover:text-white'
+    }`;
+  };
+
+  const mainVillaImages = [
     { id: 1, src: '/main/Main1.jpg', alt: 'Main Villa 1' },
     { id: 2, src: '/main/Main2.jpg', alt: 'Main Villa 2' },
     { id: 3, src: '/main/Main3.jpg', alt: 'Main Villa 3' },
@@ -70,7 +105,15 @@ export default function LandingPage() {
   return (
     <div className="relative w-full bg-[#F8F9FA] min-h-screen overflow-x-hidden font-poppins">
       
-      {/* --- ADDED: FULL-SCREEN IMAGE MODAL --- */}
+      {/* --- STICKY BURGER MENU --- */}
+      <button 
+        onClick={() => setIsNavOpen(true)}
+        className="fixed top-6 left-6 lg:top-8 lg:left-10 z-[45] p-3 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white shadow-lg hover:bg-black/40 transition-all"
+      >
+        <Menu size={24} />
+      </button>
+
+      {/* --- FULL-SCREEN IMAGE MODAL --- */}
       {selectedImage && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 lg:p-12 animate-fade-in cursor-zoom-out"
@@ -86,12 +129,12 @@ export default function LandingPage() {
             src={selectedImage} 
             alt="Full screen view" 
             className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl animate-fade-in-up cursor-default" 
-            onClick={(e) => e.stopPropagation()} // Prevents closing when clicking exactly on the image
+            onClick={(e) => e.stopPropagation()} 
           />
         </div>
       )}
 
-      {/* --- NAVIGATION DRAWER --- */}
+      {/* --- NAVIGATION DRAWER BACKGROUND OVERLAY --- */}
       {isNavOpen && (
         <div 
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-all duration-300"
@@ -99,28 +142,30 @@ export default function LandingPage() {
         />
       )}
 
-      <div className={`fixed top-0 right-0 lg:left-0 lg:right-auto h-full w-64 z-[60] transform transition-transform duration-300 ease-in-out ${isNavOpen ? 'translate-x-0' : 'translate-x-full lg:-translate-x-full'} bg-white lg:bg-black/30 lg:backdrop-blur-xl lg:border-r lg:border-white/10 shadow-2xl flex flex-col`}>
+      {/* UPDATED: Removed bg-white so mobile uses the sleek dark glassmorphism */}
+      <div className={`fixed top-0 left-0 h-full w-64 z-[60] transform transition-transform duration-300 ease-in-out ${isNavOpen ? 'translate-x-0' : '-translate-x-full'} bg-black/30 backdrop-blur-xl border-r border-white/10 shadow-2xl flex flex-col`}>
         <div className="p-6 flex flex-col h-full">
-          <div className="flex justify-between lg:justify-end items-center mb-8">
-            <span className="lg:hidden font-bold text-[#C98A1E] tracking-widest uppercase text-sm">Menu</span>
-            <button onClick={() => setIsNavOpen(false)} className="text-gray-400 lg:text-white/70 hover:text-gray-800 lg:hover:text-white transition-colors">
+          <div className="flex justify-end items-center mb-8">
+            <button onClick={() => setIsNavOpen(false)} className="text-white/70 hover:text-white transition-colors">
               <X size={24} />
             </button>
           </div>
-          <nav className="flex flex-col gap-4 lg:gap-6 text-gray-500 lg:text-gray-400 font-medium lg:font-normal">
-            <button onClick={() => scrollToSection('home')} className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:bg-orange-50 lg:hover:bg-transparent lg:hover:text-white hover:text-[#C98A1E] transition-colors focus:text-[#C98A1E] lg:focus:text-white lg:focus:font-semibold">
+          <nav className="flex flex-col gap-4 lg:gap-6 text-gray-400 font-normal">
+            <button onClick={() => scrollToSection('home')} className={getNavLinkClass('home')}>
               <HomeIcon size={20} /> <span className="text-sm">Home</span>
             </button>
-            <button onClick={() => scrollToSection('about')} className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:bg-orange-50 lg:hover:bg-transparent lg:hover:text-white hover:text-[#C98A1E] transition-colors focus:text-[#C98A1E] lg:focus:text-white lg:focus:font-semibold">
+            <button onClick={() => scrollToSection('about')} className={getNavLinkClass('about')}>
               <TreePine size={20} /> <span className="text-sm">About Us</span>
             </button>
-            <button onClick={() => navigate('/booking')} className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:bg-orange-50 lg:hover:bg-transparent lg:hover:text-white hover:text-[#C98A1E] transition-colors focus:text-[#C98A1E] lg:focus:text-white lg:focus:font-semibold lg:text-white lg:font-semibold">
+            <button onClick={() => navigate('/booking')} className={getNavLinkClass('booking')}>
               <CalendarDays size={20} /> <span className="text-sm">Book Now</span>
             </button>
-            <div className="lg:hidden w-full h-px bg-gray-100 my-2"></div>
+            
+            <div className="lg:hidden w-full h-px bg-white/10 my-2"></div>
+            
             <button 
               onClick={() => { setIsNavOpen(false); setIsLoginOpen(true); }} 
-              className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:bg-orange-50 lg:hover:bg-transparent lg:hover:text-white hover:text-[#C98A1E] transition-colors focus:text-[#C98A1E] lg:focus:text-white lg:focus:font-semibold lg:mt-4"
+              className="flex items-center gap-3 p-3 lg:p-0 rounded-xl lg:rounded-none hover:text-white transition-colors lg:mt-4 text-gray-400"
             >
               <LogIn size={20} /> <span className="text-sm">Admin Access</span>
             </button>
@@ -133,22 +178,6 @@ export default function LandingPage() {
       {/* --- 1. HERO SECTION --- */}
       <section id="home" ref={heroRef} className="relative h-screen w-full flex flex-col justify-center lg:justify-between overflow-hidden lg:px-16 xl:px-24">
         
-        <button 
-          onClick={() => setIsNavOpen(true)}
-          className="lg:hidden fixed top-6 left-6 z-40 p-2.5 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white shadow-lg hover:bg-black/40 transition-all"
-        >
-          <Menu size={24} />
-        </button>
-
-        <header className="hidden lg:flex relative z-40 w-full pt-8 justify-end items-center">
-          <button 
-            onClick={() => setIsNavOpen(true)} 
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white px-5 py-2.5 rounded-full transition-all text-sm font-medium tracking-wide shadow-lg"
-          >
-            <Menu size={16} /> Menu
-          </button>
-        </header>
-
         <motion.div 
           className="absolute inset-0 z-0"
           style={{ scale: backgroundScale }}
@@ -219,7 +248,7 @@ export default function LandingPage() {
                 {mainVillaImages.map((img) => (
                   <div 
                     key={img.id} 
-                    onClick={() => setSelectedImage(img.src)} // <-- ADDED: Click handler
+                    onClick={() => setSelectedImage(img.src)} 
                     className="w-40 h-52 lg:w-48 lg:h-64 shrink-0 rounded-[2rem] overflow-hidden shadow-sm transition-transform hover:scale-[1.02] cursor-zoom-in snap-center"
                   >
                     <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
@@ -234,7 +263,7 @@ export default function LandingPage() {
                 {miniVillaImages.map((img) => (
                   <div 
                     key={img.id} 
-                    onClick={() => setSelectedImage(img.src)} // <-- ADDED: Click handler
+                    onClick={() => setSelectedImage(img.src)} 
                     className="w-40 h-52 lg:w-48 lg:h-64 shrink-0 rounded-[2rem] overflow-hidden shadow-sm transition-transform hover:scale-[1.02] cursor-zoom-in snap-center"
                   >
                     <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
