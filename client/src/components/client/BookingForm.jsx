@@ -9,6 +9,15 @@ import LoginModal from '../ui/LoginModal';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+// Helper to push the input into view when the mobile keyboard opens
+const handleMobileFocus = (e) => {
+  if (window.innerWidth < 1024) {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+};
+
 const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, maxLength, pattern, title, compact }) => (
   <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 ${compact ? 'px-2' : 'px-3'}`}>
     <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-auto' : 'w-20'}`}>
@@ -21,6 +30,7 @@ const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, pl
       name={name}
       value={value}
       onChange={onChange}
+      onFocus={handleMobileFocus}
       placeholder={placeholder}
       maxLength={maxLength}
       pattern={pattern}
@@ -41,6 +51,7 @@ const DatePickerField = ({ icon: Icon, label, selected, onChange, minDate, maxDa
     <DatePicker
       selected={selected}
       onChange={onChange}
+      onFocus={handleMobileFocus}
       minDate={minDate}
       maxDate={maxDate}
       excludeDates={excludeDates}
@@ -65,6 +76,7 @@ const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
       name={name}
       value={value}
       onChange={onChange}
+      onFocus={handleMobileFocus}
       className="bg-transparent flex-1 outline-none text-xs text-gray-800 font-medium w-full min-w-0 cursor-pointer"
     >
       <option value="Main Villa">Main</option>
@@ -108,10 +120,8 @@ export default function BookingForm() {
 
         snapshot.forEach(doc => {
           const data = doc.data();
-          
           const [inYear, inMonth, inDay] = data.checkIn.split('-').map(Number);
           const start = new Date(inYear, inMonth - 1, inDay);
-          
           const [outYear, outMonth, outDay] = data.checkOut.split('-').map(Number);
           const end = new Date(outYear, outMonth - 1, outDay);
           
@@ -220,7 +230,8 @@ export default function BookingForm() {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden font-poppins flex flex-col items-center justify-center pt-24 lg:pt-0 pb-12 px-6 lg:px-20">
+    // min-h-[100dvh] ensures it scales perfectly with mobile keyboards
+    <div className="relative min-h-[100dvh] w-full overflow-x-hidden font-poppins flex flex-col items-center justify-center pt-24 lg:pt-0 pb-12 lg:pb-0 px-6 lg:px-20">
 
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
@@ -294,15 +305,12 @@ export default function BookingForm() {
             <button onClick={() => setIsNavOpen(false)} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold text-white font-semibold">
               <CalendarDays size={20} /> <span className="text-sm">Book Now</span>
             </button>
-            
-            {/* UPDATED: Changed from "Sign In" to "Admin Access" */}
             <button 
               onClick={() => { setIsNavOpen(false); setIsLoginOpen(true); }}
               className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4"
             >
               <LogIn size={20} /> <span className="text-sm">Admin Access</span>
             </button>
-
           </nav>
         </div>
       </div>

@@ -129,81 +129,84 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
   return (
     <div className="w-full bg-[#F8F9FA] font-poppins pb-20 animate-fade-in">
       
-      {/* Booking Details Modal Overlay */}
+      {/* UPDATED: Booking Details Modal Overlay (Scrollable for future Edit form) */}
       {selectedBooking && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-fade-in"
+          className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm overflow-y-auto overscroll-none animate-fade-in"
           onClick={() => setSelectedBooking(null)}
         >
-          <div 
-            className="bg-white rounded-[32px] p-6 lg:p-8 w-full max-w-sm shadow-2xl relative animate-fade-in-up"
-            onClick={e => e.stopPropagation()}
-          >
-            <button 
-              onClick={() => setSelectedBooking(null)} 
-              className="absolute top-6 right-6 text-[#C98A1E] hover:text-[#b57a18] transition-colors"
+          {/* min-h-[100dvh] flex wrapper allows modal to stay centered but get pushed up by mobile keyboards */}
+          <div className="flex min-h-[100dvh] items-center justify-center p-4 py-8">
+            <div 
+              className="bg-white rounded-[32px] p-6 lg:p-8 w-full max-w-sm shadow-2xl relative animate-fade-in-up"
+              onClick={e => e.stopPropagation()}
             >
-              <X size={24} strokeWidth={1.5} />
-            </button>
-            
-            <div className="text-center mb-8">
-              <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-medium">Reservation</p>
-              <h2 className="text-2xl font-['Poppins',serif] text-gray-800">
-                Booking <span className="font-bold italic text-[#C98A1E]">Details</span>
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Name</p>
-                <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
-                  <User size={16} className="text-[#C98A1E] mr-3 shrink-0" />
-                  <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
-                  <span className="text-sm font-semibold text-gray-800">{selectedBooking.guestName || 'N/A'}</span>
-                </div>
+              <button 
+                onClick={() => setSelectedBooking(null)} 
+                className="absolute top-6 right-6 text-[#C98A1E] hover:text-[#b57a18] transition-colors"
+              >
+                <X size={24} strokeWidth={1.5} />
+              </button>
+              
+              <div className="text-center mb-8">
+                <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-medium">Reservation</p>
+                <h2 className="text-2xl font-['Poppins',serif] text-gray-800">
+                  Booking <span className="font-bold italic text-[#C98A1E]">Details</span>
+                </h2>
               </div>
 
-              <div>
-                <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Email</p>
-                <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
-                  <Mail size={16} className="text-[#C98A1E] mr-3 shrink-0" />
-                  <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
-                  <span className="text-sm font-semibold text-gray-800 break-all">{selectedBooking.email || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Number</p>
-                <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
-                  <Phone size={16} className="text-[#C98A1E] mr-3 shrink-0" />
-                  <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
-                  <span className="text-sm font-semibold text-gray-800">{selectedBooking.phone || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Check In</p>
-                  <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-3">
-                    <CalendarDays size={16} className="text-[#C98A1E] mr-2 shrink-0" />
-                    <div className="w-px h-5 bg-gray-300 mr-2 shrink-0"></div>
-                    <span className="text-[13px] font-semibold text-gray-800">{formatMMDDYYYY(selectedBooking.checkIn)}</span>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Name</p>
+                  <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
+                    <User size={16} className="text-[#C98A1E] mr-3 shrink-0" />
+                    <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
+                    <span className="text-sm font-semibold text-gray-800">{selectedBooking.guestName || 'N/A'}</span>
                   </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Check Out</p>
-                  <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-3">
-                    <CalendarDays size={16} className="text-[#C98A1E] mr-2 shrink-0" />
-                    <div className="w-px h-5 bg-gray-300 mr-2 shrink-0"></div>
-                    <span className="text-[13px] font-semibold text-gray-800">{formatMMDDYYYY(selectedBooking.checkOut)}</span>
+
+                <div>
+                  <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Email</p>
+                  <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
+                    <Mail size={16} className="text-[#C98A1E] mr-3 shrink-0" />
+                    <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
+                    <span className="text-sm font-semibold text-gray-800 break-all">{selectedBooking.email || 'N/A'}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Number</p>
+                  <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
+                    <Phone size={16} className="text-[#C98A1E] mr-3 shrink-0" />
+                    <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
+                    <span className="text-sm font-semibold text-gray-800">{selectedBooking.phone || 'N/A'}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Check In</p>
+                    <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-3">
+                      <CalendarDays size={16} className="text-[#C98A1E] mr-2 shrink-0" />
+                      <div className="w-px h-5 bg-gray-300 mr-2 shrink-0"></div>
+                      <span className="text-[13px] font-semibold text-gray-800">{formatMMDDYYYY(selectedBooking.checkIn)}</span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Check Out</p>
+                    <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-3">
+                      <CalendarDays size={16} className="text-[#C98A1E] mr-2 shrink-0" />
+                      <div className="w-px h-5 bg-gray-300 mr-2 shrink-0"></div>
+                      <span className="text-[13px] font-semibold text-gray-800">{formatMMDDYYYY(selectedBooking.checkOut)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <button className="w-full mt-8 bg-[#C98A1E] text-white py-3.5 rounded-full text-sm font-bold shadow-md hover:bg-[#b57a18] transition-all hover:shadow-lg active:scale-95">
-              Edit Booking
-            </button>
+              <button className="w-full mt-8 bg-[#C98A1E] text-white py-3.5 rounded-full text-sm font-bold shadow-md hover:bg-[#b57a18] transition-all hover:shadow-lg active:scale-95">
+                Edit Booking
+              </button>
+            </div>
           </div>
         </div>
       )}

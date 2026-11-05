@@ -3,13 +3,14 @@ import { Navigate } from 'react-router-dom';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 export default function ProtectedRoute({ children }) {
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [user, setUser] = useState(null);
+  const auth = getAuth();
+  
+  // If Firebase already knows there is a user, skip the checking phase
+  const [isAuthChecking, setIsAuthChecking] = useState(!auth.currentUser);
+  const [user, setUser] = useState(auth.currentUser);
 
   useEffect(() => {
-    const auth = getAuth();
-    
-    // Listen for Firebase auth state changes
+    // This still runs to catch actual logouts or initial page loads
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsAuthChecking(false);
@@ -18,7 +19,6 @@ export default function ProtectedRoute({ children }) {
     return () => unsubscribe();
   }, []);
 
-  // Use your custom loading UI while waiting for Firebase
   if (isAuthChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA] text-sm text-neutral-500 font-poppins">
@@ -27,11 +27,9 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  // Relocate unauthorized users
   if (!user) {
     return <Navigate to="/" replace />;
   }
 
-  // Render the dashboard if logged in
   return children;
 }

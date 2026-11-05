@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { User, Lock, X } from 'lucide-react'; 
-import '../../firebase'; // Adjust path if needed based on where you save this file
+import { User, Lock, X, Eye, EyeOff } from 'lucide-react'; 
+import '../../firebase'; 
 
 const LoginModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // New state to toggle password visibility
+  const [showPassword, setShowPassword] = useState(false);
   
   const navigate = useNavigate();
   const auth = getAuth();
@@ -90,8 +93,10 @@ const LoginModal = ({ isOpen, onClose }) => {
             <div className="flex items-center bg-[#EFEFEF] rounded-xl px-4 py-3">
               <Lock size={16} className="text-[#D4B07A] shrink-0 mr-3" />
               <div className="w-px h-5 bg-gray-300 mr-3"></div>
+              
+              {/* Dynamic type based on showPassword state */}
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
@@ -99,6 +104,16 @@ const LoginModal = ({ isOpen, onClose }) => {
                 required
                 className="bg-transparent flex-1 outline-none text-sm text-gray-800 font-medium w-full min-w-0"
               />
+              
+              {/* Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="ml-2 shrink-0 text-gray-400 hover:text-[#D4B07A] transition-colors focus:outline-none"
+                tabIndex="-1" // Prevents the toggle from trapping keyboard navigation
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 

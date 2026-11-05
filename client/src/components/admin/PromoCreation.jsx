@@ -3,11 +3,16 @@ import { Percent, Bell as LucideBell, Calendar, ChevronDown, Trash2 } from 'luci
 import { collection, addDoc, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
-// Rendered inside AdminDashboard (like AdminCalendar), so the login check,
-// sidebar and notification modal all come from the dashboard shell.
-
-// Firestore collection the promos are saved to. Make this match the collection name in your Firebase console.
 const PROMOS_COLLECTION = 'promotions';
+
+// Helper to push the input into view when the mobile keyboard opens
+const handleMobileFocus = (e) => {
+  if (window.innerWidth < 1024) {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+};
 
 const emptyForm = {
   title: '',
@@ -23,8 +28,10 @@ const fieldClass =
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const formatShort = (yyyymmdd) => {
-  if (!yyyymmdd) return '—';
+  if (!yyyymmdd || typeof yyyymmdd !== 'string') return '—';
+  
   const [y, m, d] = yyyymmdd.split('-').map(Number);
+  
   return `${monthNames[m - 1]} ${d}, ${y}`;
 };
 
@@ -47,7 +54,6 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  // Existing promos (live) and delete flow
   const [promos, setPromos] = useState([]);
   const [loadError, setLoadError] = useState('');
   const [promoToDelete, setPromoToDelete] = useState(null);
@@ -59,7 +65,6 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
       collection(db, PROMOS_COLLECTION),
       (snapshot) => {
         const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-        // newest start date first
         list.sort((a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')));
         setPromos(list);
         setLoadError('');
@@ -150,7 +155,6 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
   return (
     <div className="w-full bg-[#F8F9FA] font-poppins pb-20 animate-fade-in">
 
-      {/* Delete confirmation modal */}
       {promoToDelete && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-fade-in"
@@ -160,7 +164,7 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-promo-title"
-            className="bg-white rounded-[32px] p-6 lg:p-8 w-full max-w-sm shadow-2xl"
+            className="bg-white rounded-[32px] p-6 lg:p-8 w-full max-w-sm shadow-2xl relative animate-fade-in-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4">
@@ -199,10 +203,9 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
           </div>
         </div>
       )}
-      {/* Responsive Container */}
+      
       <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 pt-10 lg:pt-14">
 
-        {/* Header with Notification Bell */}
         <header className="flex items-center justify-end mb-4 lg:mb-8">
           <button
             type="button"
@@ -217,20 +220,16 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
           </button>
         </header>
 
-        {/* Title */}
         <div className="mb-6 lg:mb-10">
           <h2 className="text-[10px] lg:text-xs font-bold tracking-widest text-gray-500 uppercase mb-1">Balai 88</h2>
           <h1 className="text-3xl lg:text-4xl font-bold text-[#C98A1E]">Promotions</h1>
         </div>
 
-        {/* Desktop Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
 
-          {/* Left Column: Promo form card */}
           <div className="lg:col-span-7 xl:col-span-8">
             <form onSubmit={handleSubmit} noValidate className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm h-full">
 
-              {/* Offer setup */}
               <div className="flex justify-between items-start gap-3 mb-6 lg:mb-8">
                 <div className="min-w-0">
                   <p className="text-[10px] lg:text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">New Promo</p>
@@ -249,6 +248,7 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
                   type="text"
                   value={form.title}
                   onChange={handleChange}
+                  onFocus={handleMobileFocus}
                   placeholder="e.g. Christmas Promo"
                   className={fieldClass}
                 />
@@ -264,6 +264,7 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
                       name="discountType"
                       value={form.discountType}
                       onChange={handleChange}
+                      onFocus={handleMobileFocus}
                       className={`${fieldClass} appearance-none pr-10`}
                     >
                       <option value="percentage">Percentage</option>
@@ -285,6 +286,7 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
                       inputMode="decimal"
                       value={form.discountValue}
                       onChange={handleChange}
+                      onFocus={handleMobileFocus}
                       placeholder="10"
                       className={`${fieldClass} pr-10`}
                     />
@@ -296,7 +298,6 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
                 </div>
               </div>
 
-              {/* Schedule period */}
               <div className="mt-8 lg:mt-10 border-t border-gray-100 pt-6 lg:pt-8">
                 <p className="text-[10px] lg:text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">Schedule Period</p>
                 <h3 className="text-xl lg:text-2xl font-bold text-[#C98A1E] mb-5 lg:mb-6">Active Dates</h3>
@@ -316,6 +317,7 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
                           type="date"
                           value={form[f.id]}
                           onChange={handleChange}
+                          onFocus={handleMobileFocus}
                           min={f.id === 'endDate' ? form.startDate || undefined : undefined}
                           className={`${fieldClass} pl-11 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0`}
                         />
@@ -347,7 +349,6 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
             </form>
           </div>
 
-          {/* Right Column: Live preview */}
           <div className="lg:col-span-5 xl:col-span-4">
             <p className="text-[10px] lg:text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">Live Preview</p>
             <h3 className="text-lg lg:text-xl font-medium text-gray-400 mb-4 lg:mb-6">
@@ -382,7 +383,6 @@ export default function PromoCreation({ onOpenNotif, pendingCount = 0 }) {
 
         </div>
 
-        {/* Manage promos */}
         <section className="mt-10 lg:mt-14">
           <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm">
             <div className="flex justify-between items-start gap-3 mb-6 lg:mb-8">
