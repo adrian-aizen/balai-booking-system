@@ -6,7 +6,7 @@ import { db } from '../../firebase';
 import AdminCalendar from './AdminCalendar';
 import AdminNavbar from '../ui/AdminNavbar';
 import NotificationsModal from '../ui/NotificationModal';
-import ManualBookingModal from '../ui/ManualBooking'; // Ensure this matches your file name
+import ManualBookingModal from '../ui/ManualBooking'; 
 import balaiLogo from '../../assets/BalaiLogo.svg';
 import PromoCreation from './PromoCreation';
 
