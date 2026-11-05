@@ -1,383 +1,324 @@
-import { useState } from 'react';
-import { Percent, Bell as LucideBell, ChevronLeft, ChevronRight, User, Mail, Phone, CalendarDays, X } from 'lucide-react';
-
-export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount = 0 }) {
-  const [selectedVilla, setSelectedVilla] = useState('Main Villa');
-  const [isFullMonthView, setIsFullMonthView] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [currentMonth, setCurrentMonth] = useState(new Date()); 
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+import { collection, onSnapshot } from 'firebase/firestore'; 
+import { db } from '../../firebase';
+import AdminCalendar from './AdminCalendar';
+import AdminNavbar from '../ui/AdminNavbar';
+import NotificationsModal from '../ui/NotificationModal';
+import ManualBookingModal from '../ui/ManualBooking'; // Ensure this matches your file name
+import balaiLogo from '../../assets/BalaiLogo.svg';
+import PromoCreation from './PromoCreation';
+ 
+const GOLD = "#B97216";
+const GOLD_DEEP = "#C98A1E";
+ 
+const BellIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z" />
+    <path d="M10 20a2 2 0 0 0 4 0" />
+  </svg>
+);
+const CalendarIcon = ({ className = "h-5 w-5" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3.5" y="5" width="17" height="15" rx="2" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+  </svg>
+);
+const ClockIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </svg>
+);
+ 
+const AdminDashboard = () => {
+  const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
   
-  const [selectedBooking, setSelectedBooking] = useState(null);
-
-  const handlePrev = () => {
-    if (isFullMonthView) {
-      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-    } else {
-      const newDate = new Date(selectedDate);
-      newDate.setDate(selectedDate.getDate() - 7);
-      setSelectedDate(newDate);
-      setCurrentMonth(newDate); 
-    }
+  const [view, setView] = useState('home'); 
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isManualOpen, setIsManualOpen] = useState(false);
+  const [isNavOpen, setIsNavOpen] = useState(false); // mobile sidebar drawer
+  const [isCollapsed, setIsCollapsed] = useState(true); // desktop: icons only vs. icons + labels
+ 
+  useEffect(() => {
+    const auth = getAuth();
+    let unsubscribeSnapshot = null;
+ 
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        navigate('/', { replace: true });
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+      } else {
+        setChecking(false);
+        // Live Firebase Listener
+        unsubscribeSnapshot = onSnapshot(collection(db, "bookings"), (snapshot) => {
+          const bookingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setBookings(bookingsData);
+          setLoading(false);
+        });
+      }
+    });
+ 
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) unsubscribeSnapshot();
+    };
+  }, [navigate]);
+ 
+  const handleLogout = async () => {
+    try { await signOut(getAuth()); } finally { navigate('/', { replace: true }); }
   };
-
-  const handleNext = () => {
-    if (isFullMonthView) {
-      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-    } else {
-      const newDate = new Date(selectedDate);
-      newDate.setDate(selectedDate.getDate() + 7);
-      setSelectedDate(newDate);
-      setCurrentMonth(newDate);
-    }
-  };
-
+ 
   const formatYYYYMMDD = (date) => {
     const d = new Date(date);
     return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
   };
-
-  // SUPER SAFE DATE FORMATTER
-  const formatMMDDYYYY = (dateVal) => {
-    if (!dateVal) return 'N/A';
-    // If it's a Firebase Timestamp, convert it. Otherwise, ensure it's a string.
-    const dateStr = typeof dateVal.toDate === 'function' ? formatYYYYMMDD(dateVal.toDate()) : String(dateVal);
-    if (!dateStr.includes('-')) return dateStr;
-    const [y, m, d] = dateStr.split('-');
-    return `${m}/${d}/${y}`;
-  };
-
-  const isSameDay = (date1, date2) => formatYYYYMMDD(date1) === formatYYYYMMDD(date2);
-
-  const getWeekDays = (date) => {
-    const start = new Date(date);
-    start.setDate(start.getDate() - start.getDay());
-    return Array.from({ length: 7 }).map((_, i) => {
-      const day = new Date(start);
-      day.setDate(start.getDate() + i);
-      return day;
-    });
-  };
-
-  const getMonthDays = (year, month) => {
-    const date = new Date(year, month, 1);
-    const days = [];
-    for (let i = 0; i < date.getDay(); i++) days.push(null);
-    while (date.getMonth() === month) {
-      days.push(new Date(date));
-      date.setDate(date.getDate() + 1);
-    }
-    return days;
-  };
-
+  // Bookings may store dates as YYYY-MM-DD text or as a Firestore Timestamp
+  const toDateStr = (v) => (typeof v?.toDate === 'function' ? formatYYYYMMDD(v.toDate()) : String(v || ''));
+ 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-
-  const selectedDateStr = formatYYYYMMDD(selectedDate);
-  
-  // Safe filtering
-  const todaysSchedule = bookings.filter(b => {
-    const inStr = typeof b.checkIn?.toDate === 'function' ? formatYYYYMMDD(b.checkIn.toDate()) : String(b.checkIn || '');
-    const outStr = typeof b.checkOut?.toDate === 'function' ? formatYYYYMMDD(b.checkOut.toDate()) : String(b.checkOut || '');
-    return b.villaType === selectedVilla && (inStr === selectedDateStr || outStr === selectedDateStr);
-  });
-  
-  const getDayActivities = (date) => {
-    if (!date) return { hasCheckIn: false, hasCheckOut: false };
-    const dateStr = formatYYYYMMDD(date);
-    return {
-      hasCheckIn: bookings.some(b => {
-        const inStr = typeof b.checkIn?.toDate === 'function' ? formatYYYYMMDD(b.checkIn.toDate()) : String(b.checkIn || '');
-        return b.villaType === selectedVilla && inStr === dateStr;
-      }),
-      hasCheckOut: bookings.some(b => {
-        const outStr = typeof b.checkOut?.toDate === 'function' ? formatYYYYMMDD(b.checkOut.toDate()) : String(b.checkOut || '');
-        return b.villaType === selectedVilla && outStr === dateStr;
-      })
-    };
+ 
+  if (checking || loading) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA] text-sm text-neutral-500 font-poppins">Loading Dashboard Data...</div>;
+  }
+ 
+  // --- Filter Bookings by Status ---
+  const pendingBookings = bookings.filter(b => b.status === 'pending');
+  const confirmedBookings = bookings.filter(b => b.status === 'confirmed');
+ 
+  // --- Home Dashboard Logic (Only looks at confirmed bookings) ---
+  const today = new Date();
+  const todayStr = formatYYYYMMDD(today);
+  const currentMonthPrefix = todayStr.substring(0, 7); 
+ 
+  const stats = {
+    upcoming: confirmedBookings.filter(b => toDateStr(b.checkIn).startsWith(currentMonthPrefix)).length,
+    confirmed: confirmedBookings.length,
+    pending: pendingBookings.length
   };
-
-  const weekDays = getWeekDays(selectedDate);
-  const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
-
+ 
+  const currentBooking = confirmedBookings.find(b => toDateStr(b.checkIn) <= todayStr && toDateStr(b.checkOut) > todayStr);
+  const isOccupied = !!currentBooking;
+  const checkOutDate = currentBooking ? new Date(`${toDateStr(currentBooking.checkOut)}T00:00:00`) : null;
+ 
+  const liveActivities = confirmedBookings
+    .filter(b => toDateStr(b.checkIn) === todayStr || toDateStr(b.checkOut) === todayStr)
+    .map(b => ({
+      id: b.id,
+      initials: b.guestName ? b.guestName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??',
+      name: b.guestName,
+      type: toDateStr(b.checkIn) === todayStr ? 'Check In' : 'Check Out',
+      time: toDateStr(b.checkIn) === todayStr ? '3:00 PM' : '12:00 NN',
+      detail: `${b.people} pax - ${b.villaType === 'Main Villa' ? 'Main' : 'Mini'}`,
+      avatar: toDateStr(b.checkIn) === todayStr ? '#E9AE57' : '#F3D9AF',
+      badge: b.status.charAt(0).toUpperCase() + b.status.slice(1),
+    }));
+ 
   return (
-    <div className="w-full bg-[#F8F9FA] font-poppins pb-20 animate-fade-in">
+    <div className="flex bg-[#F8F9FA] min-h-screen font-poppins relative">
       
-      {/* Booking Details Modal Overlay */}
-      {selectedBooking && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-fade-in"
-          onClick={() => setSelectedBooking(null)}
-        >
-          <div 
-            className="bg-white rounded-[32px] p-6 lg:p-8 w-full max-w-sm shadow-2xl relative animate-fade-in-up"
-            onClick={e => e.stopPropagation()}
-          >
-            <button 
-              onClick={() => setSelectedBooking(null)} 
-              className="absolute top-6 right-6 text-[#C98A1E] hover:text-[#b57a18] transition-colors"
-            >
-              <X size={24} strokeWidth={1.5} />
-            </button>
-            
-            <div className="text-center mb-8">
-              <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-medium">Reservation</p>
-              <h2 className="text-2xl font-['Poppins',serif] text-gray-800">
-                Booking <span className="font-bold italic text-[#C98A1E]">Details</span>
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Name</p>
-                <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
-                  <User size={16} className="text-[#C98A1E] mr-3 shrink-0" />
-                  <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
-                  <span className="text-sm font-semibold text-gray-800">{selectedBooking.guestName || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Email</p>
-                <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
-                  <Mail size={16} className="text-[#C98A1E] mr-3 shrink-0" />
-                  <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
-                  <span className="text-sm font-semibold text-gray-800 break-all">{selectedBooking.email || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Number</p>
-                <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-4">
-                  <Phone size={16} className="text-[#C98A1E] mr-3 shrink-0" />
-                  <div className="w-px h-5 bg-gray-300 mr-3 shrink-0"></div>
-                  <span className="text-sm font-semibold text-gray-800">{selectedBooking.phone || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Check In</p>
-                  <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-3">
-                    <CalendarDays size={16} className="text-[#C98A1E] mr-2 shrink-0" />
-                    <div className="w-px h-5 bg-gray-300 mr-2 shrink-0"></div>
-                    <span className="text-[13px] font-semibold text-gray-800">{formatMMDDYYYY(selectedBooking.checkIn)}</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-[9px] text-gray-400 font-medium mb-1 ml-2 tracking-wide uppercase">Check Out</p>
-                  <div className="flex items-center bg-[#F4F4F4] rounded-xl py-3 px-3">
-                    <CalendarDays size={16} className="text-[#C98A1E] mr-2 shrink-0" />
-                    <div className="w-px h-5 bg-gray-300 mr-2 shrink-0"></div>
-                    <span className="text-[13px] font-semibold text-gray-800">{formatMMDDYYYY(selectedBooking.checkOut)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button className="w-full mt-8 bg-[#C98A1E] text-white py-3.5 rounded-full text-sm font-bold shadow-md hover:bg-[#b57a18] transition-all hover:shadow-lg active:scale-95">
-              Edit Booking
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 pt-10 lg:pt-14">
+      {/* Modals */}
+      <NotificationsModal 
+        isOpen={isNotifOpen} 
+        onClose={() => setIsNotifOpen(false)} 
+        pendingBookings={pendingBookings} 
+      />
+ 
+      <ManualBookingModal 
+        isOpen={isManualOpen} 
+        onClose={() => setIsManualOpen(false)} 
+      />
+ 
+      {/* Sidebar */}
+      <AdminNavbar
+        currentView={view}
+        setView={setView}
+        isNavOpen={isNavOpen}
+        setIsNavOpen={setIsNavOpen}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+      />
+      
+      {/* Main Content Area */}
+      <div className={`flex-1 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'} transition-all duration-300 pb-10 animate-fade-in w-full`}>
         
-        <header className="flex items-center justify-end mb-4 lg:mb-8">
-          <button 
-            onClick={onOpenNotif} 
-            className="relative w-10 h-10 lg:w-12 lg:h-12 bg-[#C98A1E] rounded-full flex items-center justify-center text-white shadow-md transition-transform active:scale-95"
-          >
-            <LucideBell className="w-[18px] h-[18px] lg:w-5 lg:h-5" />
-            {pendingCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 lg:w-3.5 lg:h-3.5 bg-red-500 border-2 border-[#F8F9FA] rounded-full shadow-sm animate-pulse"></span>}
-          </button>
-        </header>
-
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-6 lg:mb-10 gap-6">
-          <div>
-            <h2 className="text-[10px] lg:text-xs font-bold tracking-widest text-gray-500 uppercase mb-1">Balai 88</h2>
-            <h1 className="text-3xl lg:text-4xl font-bold text-[#C98A1E]">Calendar</h1>
+        {view === 'calendar' ? (
+          <div className="w-full flex justify-center">
+            <AdminCalendar 
+              bookings={confirmedBookings} 
+              setView={setView} 
+              onOpenNotif={() => setIsNotifOpen(true)}
+              pendingCount={pendingBookings.length}
+            />
           </div>
-          
-          <div className="flex bg-white rounded-full p-1 shadow-sm w-full lg:w-[400px]">
-            {['Main Villa', 'Mini Villa'].map(villa => (
-              <button
-                key={villa}
-                onClick={() => setSelectedVilla(villa)}
-                className={`flex-1 py-2.5 lg:py-3 rounded-full text-xs lg:text-sm font-bold transition-all ${
-                  selectedVilla === villa ? 'bg-[#C98A1E] text-white shadow-md' : 'text-gray-500 hover:text-gray-800'
-                }`}
+        ) : view === 'promos' ? (
+          <div className="w-full flex justify-center">
+            <PromoCreation
+              onOpenNotif={() => setIsNotifOpen(true)}
+              pendingCount={pendingBookings.length}
+            />
+          </div>
+        ) : (
+          /* RESPONSIVE DASHBOARD LAYOUT */
+          <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 pt-10 lg:pt-14">
+            
+            {/* Header & Greeting */}
+            <header className="flex items-start justify-between">
+              <img src={balaiLogo} alt="Balai 88 Logo" className="h-12 lg:h-14 w-auto object-contain" />
+              <button 
+                onClick={() => setIsNotifOpen(true)} 
+                className="relative flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95" 
+                style={{ backgroundColor: GOLD }}
               >
-                {villa}
+                <BellIcon />
+                {stats.pending > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#F8F9FA] rounded-full shadow-sm animate-pulse"></span>}
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-          
-          <div className="lg:col-span-7 xl:col-span-8">
-            <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm h-full flex flex-col">
+            </header>
+ 
+            <h1 className="mt-6 lg:mt-8 font-['Poppins',serif] font-bold text-3xl lg:text-4xl leading-tight">
+              Good day, <em style={{ color: GOLD }}>Admin.</em>
+            </h1>
+ 
+            {/* Grid Layout for Desktop vs Mobile */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8 lg:mt-10">
               
-              <div className="flex justify-between items-start lg:items-center mb-6 lg:mb-8">
-                <div>
-                  <p className="text-[10px] lg:text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">{isFullMonthView ? 'Full Month' : 'This Week'}</p>
-                  <h3 className="text-xl lg:text-2xl font-bold text-[#C98A1E] mt-1 min-w-[160px]">
-                    {monthNames[isFullMonthView ? currentMonth.getMonth() : selectedDate.getMonth()]} {isFullMonthView ? currentMonth.getFullYear() : selectedDate.getFullYear()}
-                  </h3>
-                </div>
-
-                <button 
-                  onClick={() => {
-                    setIsFullMonthView(!isFullMonthView);
-                    if (!isFullMonthView) {
-                      setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
-                    }
-                  }}
-                  className="px-4 py-2 lg:py-2.5 rounded-full border border-[#C98A1E] text-[#C98A1E] text-[9px] lg:text-[10px] font-bold uppercase tracking-wider bg-[#C98A1E]/10 hover:bg-[#C98A1E] hover:text-white transition-colors whitespace-nowrap mt-4 lg:mt-0"
-                >
-                  {isFullMonthView ? 'Collapse' : 'View Full'}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {dayNames.map(day => (
-                  <div key={day} className="text-center text-[9px] lg:text-xs font-bold text-gray-400 uppercase">{day}</div>
-                ))}
-              </div>
-
-              {!isFullMonthView ? (
-                <div className="grid grid-cols-7 gap-1 lg:gap-2 relative flex-1">
-                  {weekDays.map((date, i) => {
-                    const isSelected = isSameDay(date, selectedDate);
-                    const activities = getDayActivities(date);
-                    return (
-                      <button 
-                        key={i}
-                        onClick={() => setSelectedDate(date)}
-                        className={`flex flex-col items-center py-3 lg:py-5 rounded-2xl lg:rounded-3xl transition-all ${isSelected ? 'bg-[#C98A1E] text-white shadow-md scale-105' : 'text-gray-700 hover:bg-gray-50'}`}
-                      >
-                        <span className="text-lg lg:text-2xl font-bold">{date.getDate()}</span>
-                        <div className="flex gap-1 mt-1.5 lg:mt-2 h-2">
-                          {activities.hasCheckIn && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-emerald-500'}`}></span>}
-                          {activities.hasCheckOut && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`}></span>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="grid grid-cols-7 gap-1 border-t border-l border-gray-100 flex-1">
-                  {monthDays.map((date, i) => {
-                    const isSelected = date && isSameDay(date, selectedDate);
-                    const activities = getDayActivities(date);
-                    return (
-                      <button 
-                        key={i}
-                        onClick={() => date && setSelectedDate(date)}
-                        disabled={!date}
-                        className={`h-16 lg:h-24 border-b border-r border-gray-100 flex flex-col items-center pt-2 lg:pt-4 relative ${!date ? 'bg-gray-50' : 'hover:bg-gray-50'} ${isSelected ? 'bg-orange-50' : ''}`}
-                      >
-                        {date && (
-                          <>
-                            <span className={`text-xs lg:text-sm font-bold ${isSelected ? 'w-7 h-7 lg:w-9 lg:h-9 bg-[#C98A1E] text-white rounded-full flex items-center justify-center shadow-sm' : 'text-gray-700'}`}>
-                              {date.getDate()}
-                            </span>
-                            <div className="flex gap-1 absolute bottom-2 lg:bottom-4 h-2">
-                              {activities.hasCheckIn && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500"></span>}
-                              {activities.hasCheckOut && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-blue-500"></span>}
-                            </div>
-                          </>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="flex justify-between items-center mt-6 pt-5 border-t border-gray-100 w-full">
+              {/* Left Column (Status & Activities) */}
+              <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-8">
                 
-                <div className="flex gap-2">
-                  <button onClick={handlePrev} className="w-8 h-8 lg:w-9 lg:h-9 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors shadow-sm border border-gray-200">
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button onClick={handleNext} className="w-8 h-8 lg:w-9 lg:h-9 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors shadow-sm border border-gray-200">
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                    <span className="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Confirmed</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                    <span className="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Departing</span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 xl:col-span-4">
-            <p className="text-[10px] lg:text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">Daily Schedule</p>
-            <h3 className="text-lg lg:text-xl font-medium text-gray-400 mb-4 lg:mb-6">
-              <span className="font-bold text-[#C98A1E]">{dayNames[selectedDate.getDay()]}</span> {monthNames[selectedDate.getMonth()]} {selectedDate.getDate()}
-            </h3>
-
-            <div className="space-y-4">
-              <div className="bg-[#FDF3E1] border border-[#F5E1C8] rounded-3xl p-5 lg:p-6 flex items-center shadow-sm">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-[#F5D8A9] flex items-center justify-center mr-4 shrink-0 shadow-inner">
-                  <Percent size={20} className="text-[#967444]" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[9px] lg:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 lg:mb-1">Active Promo</p>
-                  <p className="text-sm lg:text-base font-bold text-gray-900">Christmas Promo</p>
-                </div>
-                <span className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] lg:text-[10px] font-bold uppercase tracking-widest border border-emerald-200 shadow-sm">10% OFF</span>
-              </div>
-
-              {todaysSchedule.length === 0 ? (
-                <p className="text-xs lg:text-sm text-gray-400 text-center py-10 lg:py-12 border-2 border-dashed border-gray-300 rounded-3xl font-medium bg-white/50">No check-ins or check-outs today.</p>
-              ) : (
-                todaysSchedule.map((booking) => {
-                  const inStr = typeof booking.checkIn?.toDate === 'function' ? formatYYYYMMDD(booking.checkIn.toDate()) : String(booking.checkIn || '');
-                  const isCheckIn = inStr === selectedDateStr;
-                  const initials = booking.guestName ? String(booking.guestName).split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??';
-                  
-                  return (
-                    <div 
-                      key={booking.id} 
-                      onClick={() => setSelectedBooking(booking)}
-                      className="bg-white rounded-3xl p-5 lg:p-6 flex items-center shadow-sm border border-gray-50 hover:border-orange-200 hover:shadow-md transition-all cursor-pointer group"
-                    >
-                      <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-[#C98A1E] flex items-center justify-center mr-4 shrink-0 text-white font-bold text-sm lg:text-base shadow-inner group-hover:scale-105 transition-transform">
-                        {initials}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[9px] lg:text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 lg:mb-1">
-                          {isCheckIn ? 'Check In • 3:00 PM' : 'Check Out • 12:00 NN'}
-                        </p>
-                        <p className="text-sm lg:text-base font-bold text-gray-900 mb-0.5 lg:mb-1 group-hover:text-[#C98A1E] transition-colors">{booking.guestName || 'N/A'}</p>
-                        <p className="text-[10px] lg:text-xs text-neutral-500 font-medium">{booking.people || 0} Pax</p>
-                      </div>
-                      
-                      <span className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-[9px] lg:text-[10px] font-bold uppercase tracking-widest border shadow-sm ${
-                        isCheckIn ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-blue-50 text-blue-600 border-blue-200'
-                      }`}>
-                        {isCheckIn ? 'Confirmed' : 'Departing'}
-                      </span>
+                {/* Status Card */}
+                <section className="rounded-3xl p-6 lg:p-8 text-white shadow-md relative overflow-hidden" style={{ background: `linear-gradient(135deg, #D9952A 0%, ${GOLD_DEEP} 100%)` }}>
+                  <div className="flex items-start justify-between relative z-10">
+                    <div>
+                      <p className="text-[11px] lg:text-xs text-white/90 font-medium uppercase tracking-widest">Today's Status</p>
+                      <p className="mt-2 flex items-center gap-3 font-['Poppins',serif] font-semibold text-3xl lg:text-4xl tracking-wide">
+                        <span className={`h-4 w-4 lg:h-5 lg:w-5 rounded-full shadow-inner ${isOccupied ? "bg-green-400" : "bg-white/50"}`} />
+                        {isOccupied ? "Occupied" : "Available"}
+                      </p>
                     </div>
-                  );
-                })
-              )}
+                    {isOccupied && checkOutDate && (
+                      <div className="rounded-2xl bg-white/20 border border-white/30 px-5 py-3 text-center leading-none backdrop-blur-md shadow-sm">
+                        <p className="text-[9px] lg:text-[10px] uppercase tracking-wider mb-1 text-white/90">Check Out</p>
+                        <p className="text-3xl lg:text-4xl font-bold">{checkOutDate.getDate()}</p>
+                        <p className="mt-1 text-[10px] lg:text-xs tracking-wide font-medium">{monthNames[checkOutDate.getMonth()].substring(0, 3).toUpperCase()}</p>
+                      </div>
+                    )}
+                  </div>
+                  {isOccupied && (
+                    <div className="mt-10 lg:mt-12 relative z-10 border-t border-white/20 pt-4">
+                      <p className="text-[11px] lg:text-xs text-white/90 uppercase tracking-widest font-medium">Current Guest • {currentBooking.villaType}</p>
+                      <p className="mt-1 text-xl lg:text-2xl font-bold tracking-wide">{currentBooking.guestName}</p>
+                    </div>
+                  )}
+                </section>
+ 
+                {/* Live Activities */}
+                <section>
+                  <div className="flex items-end justify-between mb-5">
+                    <div>
+                      <p className="text-[10px] lg:text-xs text-neutral-400 uppercase tracking-widest font-bold mb-1">Live Updates</p>
+                      <h2 className="font-['Poppins',serif] text-2xl lg:text-3xl" style={{ color: GOLD }}>Today's <span className="font-bold italic">Activities</span></h2>
+                    </div>
+                    <button onClick={() => setView('calendar')} className="text-xs lg:text-sm font-semibold text-neutral-500 underline underline-offset-4 hover:text-neutral-900 mb-1 transition-colors">
+                      View Calendar
+                    </button>
+                  </div>
+ 
+                  <ul className="space-y-4">
+                    {liveActivities.length === 0 ? (
+                       <li className="rounded-3xl bg-white p-8 shadow-sm border border-dashed border-gray-300 text-center text-sm text-gray-400 font-medium">
+                         No check-ins or check-outs scheduled for today.
+                       </li>
+                    ) : (
+                      liveActivities.map((a) => (
+                        <li key={a.id} className="flex items-center gap-4 lg:gap-6 rounded-3xl bg-white p-5 lg:p-6 shadow-sm border border-gray-50 hover:border-gray-100 transition-colors">
+                          <span className="flex h-14 w-14 lg:h-16 lg:w-16 shrink-0 items-center justify-center rounded-2xl text-lg font-bold text-neutral-800 shadow-inner" style={{ backgroundColor: a.avatar }}>
+                            {a.initials}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] lg:text-xs text-neutral-400 uppercase tracking-wider font-bold mb-1">{a.type} • {a.time}</p>
+                            <p className="truncate text-base lg:text-lg font-bold text-gray-800">{a.name}</p>
+                            <p className="text-xs lg:text-sm text-neutral-500 mt-0.5 font-medium">{a.detail}</p>
+                          </div>
+                          <span className={`rounded-full border px-3 py-1.5 lg:px-4 lg:py-2 text-[10px] lg:text-xs font-bold uppercase tracking-wider shadow-sm ${a.badge === 'Confirmed' ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-orange-200 text-orange-500 bg-orange-50'}`}>
+                            {a.badge}
+                          </span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </section>
+              </div>
+ 
+              {/* Right Column (Stats & Shortcuts) */}
+              <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-8">
+                
+                {/* Stats */}
+                <section className="grid grid-cols-2 lg:grid-cols-1 gap-4 lg:gap-6">
+                  <article className="rounded-3xl bg-white p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+                        <CalendarIcon className="h-6 w-6" />
+                      </span>
+                      <span className="text-[10px] lg:text-xs font-bold uppercase tracking-wider" style={{ color: GOLD }}>{stats.confirmed} Confirmed</span>
+                    </div>
+                    <p className="mt-6 text-6xl font-light tracking-tight" style={{ color: GOLD }}>{stats.upcoming}</p>
+                    <p className="text-xs lg:text-sm text-neutral-400 mt-2 font-medium">Upcoming this month</p>
+                  </article>
+ 
+                  <article onClick={() => setIsNotifOpen(true)} className="rounded-3xl bg-white p-6 shadow-sm border border-gray-100 cursor-pointer hover:border-red-200 hover:shadow-md transition-all">
+                    <div className="flex items-start justify-between">
+                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+                        <ClockIcon className="h-6 w-6" />
+                      </span>
+                      <span className="text-[10px] lg:text-xs font-bold uppercase tracking-wider text-red-500">Pending Bookings</span>
+                    </div>
+                    <p className="mt-6 text-6xl font-light tracking-tight text-red-500">{stats.pending}</p>
+                    <p className="text-xs lg:text-sm text-neutral-400 mt-2 font-medium">Action Required</p>
+                  </article>
+                </section>
+ 
+                {/* Shortcuts */}
+                <section className="bg-white p-6 lg:p-8 rounded-3xl shadow-sm border border-gray-100">
+                  <p className="text-[10px] lg:text-xs text-neutral-400 uppercase tracking-widest font-bold mb-1">Tools</p>
+                  <h2 className="font-['Poppins',serif] text-2xl lg:text-3xl" style={{ color: GOLD }}>Quick <span className="font-bold italic">Shortcuts</span></h2>
+                  
+                  <div className="mt-6 flex flex-col sm:flex-row lg:flex-col xl:flex-row items-stretch sm:items-center gap-3">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsManualOpen(true)}
+                      className="flex-1 rounded-2xl py-4 lg:py-5 text-sm lg:text-base font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-95 text-center" 
+                      style={{ backgroundColor: GOLD }}
+                    >
+                      Manual Booking
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setView('calendar')}
+                      className="flex h-14 w-full sm:w-14 lg:w-full xl:w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500 shadow-sm transition-all hover:bg-orange-100 active:scale-95 border border-orange-200"
+                    >
+                      <CalendarIcon className="h-6 w-6" />
+                    </button>
+                  </div>
+                </section>
+ 
+              </div>
             </div>
+ 
+            <div className="mt-16 text-center border-t border-gray-200 pt-8">
+              <button type="button" onClick={handleLogout} className="text-xs uppercase tracking-widest font-bold text-neutral-400 hover:text-neutral-900 transition-colors">
+                Log out securely
+              </button>
+            </div>
+            
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
-}
+};
+ 
+export default AdminDashboard;

@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase';
 import { Percent, Bell as LucideBell, ChevronLeft, ChevronRight, User, Mail, Phone, CalendarDays, X } from 'lucide-react';
 
 export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount = 0 }) {
@@ -8,6 +10,16 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
   
   const [selectedBooking, setSelectedBooking] = useState(null);
+
+  const [promos, setPromos] = useState([]);
+
+  // Live list of promos from Firestore (collection name must match PromoCreation.jsx)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'promotions'), (snapshot) => {
+      setPromos(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsubscribe;
+  }, []);
 
   const handlePrev = () => {
     if (isFullMonthView) {
@@ -81,8 +93,22 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
     return b.villaType === selectedVilla && (inStr === selectedDateStr || outStr === selectedDateStr);
   });
   
+  // Promo dates are saved as YYYY-MM-DD text (or a Firestore Timestamp)
+  const toDateStr = (v) => (typeof v?.toDate === 'function' ? formatYYYYMMDD(v.toDate()) : String(v || ''));
+
+  // Every active promo that covers this day for the selected villa
+  const promosOnDate = (dateStr) =>
+    promos.filter((p) =>
+      p.active !== false &&
+      p.startDate && p.endDate &&
+      toDateStr(p.startDate) <= dateStr &&
+      dateStr <= toDateStr(p.endDate) &&
+      (!p.villaType || p.villaType === 'all' || p.villaType === selectedVilla)
+    );
+  const selectedDayPromos = promosOnDate(selectedDateStr);
+
   const getDayActivities = (date) => {
-    if (!date) return { hasCheckIn: false, hasCheckOut: false };
+    if (!date) return { hasCheckIn: false, hasCheckOut: false, hasPromo: false };
     const dateStr = formatYYYYMMDD(date);
     return {
       hasCheckIn: bookings.some(b => {
@@ -92,7 +118,8 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
       hasCheckOut: bookings.some(b => {
         const outStr = typeof b.checkOut?.toDate === 'function' ? formatYYYYMMDD(b.checkOut.toDate()) : String(b.checkOut || '');
         return b.villaType === selectedVilla && outStr === dateStr;
-      })
+      }),
+      hasPromo: promosOnDate(dateStr).length > 0
     };
   };
 
@@ -247,7 +274,7 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
               </div>
 
               {!isFullMonthView ? (
-                <div className="grid grid-cols-7 gap-1 lg:gap-2 relative flex-1">
+                <div className="grid grid-cols-7 gap-1 lg:gap-2 relative mb-6 items-start">
                   {weekDays.map((date, i) => {
                     const isSelected = isSameDay(date, selectedDate);
                     const activities = getDayActivities(date);
@@ -255,19 +282,20 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
                       <button 
                         key={i}
                         onClick={() => setSelectedDate(date)}
-                        className={`flex flex-col items-center py-3 lg:py-5 rounded-2xl lg:rounded-3xl transition-all ${isSelected ? 'bg-[#C98A1E] text-white shadow-md scale-105' : 'text-gray-700 hover:bg-gray-50'}`}
+                        className={`flex flex-col items-center self-start h-[66px] lg:h-[88px] py-3 lg:py-5 rounded-2xl lg:rounded-3xl transition-all ${isSelected ? 'bg-[#C98A1E] text-white shadow-md scale-105' : 'text-gray-700 hover:bg-gray-50'}`}
                       >
                         <span className="text-lg lg:text-2xl font-bold">{date.getDate()}</span>
                         <div className="flex gap-1 mt-1.5 lg:mt-2 h-2">
-                          {activities.hasCheckIn && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-emerald-500'}`}></span>}
-                          {activities.hasCheckOut && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`}></span>}
+                          {activities.hasCheckIn && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500`}></span>}
+                          {activities.hasCheckOut && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-red-500`}></span>}
+                          {activities.hasPromo && <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-blue-500`}></span>}
                         </div>
                       </button>
                     );
                   })}
                 </div>
               ) : (
-                <div className="grid grid-cols-7 gap-1 border-t border-l border-gray-100 flex-1">
+                <div className="grid grid-cols-7 gap-1 border-t border-l border-gray-100 mb-6">
                   {monthDays.map((date, i) => {
                     const isSelected = date && isSameDay(date, selectedDate);
                     const activities = getDayActivities(date);
@@ -285,7 +313,8 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
                             </span>
                             <div className="flex gap-1 absolute bottom-2 lg:bottom-4 h-2">
                               {activities.hasCheckIn && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500"></span>}
-                              {activities.hasCheckOut && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-blue-500"></span>}
+                              {activities.hasCheckOut && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-red-500"></span>}
+                              {activities.hasPromo && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-blue-500"></span>}
                             </div>
                           </>
                         )}
@@ -295,7 +324,7 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
                 </div>
               )}
 
-              <div className="flex justify-between items-center mt-6 pt-5 border-t border-gray-100 w-full">
+              <div className="flex justify-between items-center gap-3 mt-auto pt-5 border-t border-gray-100 w-full">
                 
                 <div className="flex gap-2">
                   <button onClick={handlePrev} className="w-8 h-8 lg:w-9 lg:h-9 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors shadow-sm border border-gray-200">
@@ -306,14 +335,18 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
                   </button>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-wrap justify-end gap-x-4 gap-y-1.5">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                     <span className="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Confirmed</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
                     <span className="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Departing</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                    <span className="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Promo</span>
                   </div>
                 </div>
 
@@ -329,16 +362,22 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
             </h3>
 
             <div className="space-y-4">
-              <div className="bg-[#FDF3E1] border border-[#F5E1C8] rounded-3xl p-5 lg:p-6 flex items-center shadow-sm">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-[#F5D8A9] flex items-center justify-center mr-4 shrink-0 shadow-inner">
-                  <Percent size={20} className="text-[#967444]" />
+              {selectedDayPromos.map((promo) => (
+                <div key={promo.id} className="bg-[#FDF3E1] border border-[#F5E1C8] rounded-3xl p-5 lg:p-6 flex items-center gap-4 shadow-sm">
+                  <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-[#F5D8A9] flex items-center justify-center shrink-0 shadow-inner">
+                    <Percent size={20} className="text-[#967444]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[9px] lg:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 lg:mb-1">Active Promo</p>
+                    <p className="truncate text-sm lg:text-base font-bold text-gray-900">{promo.title}</p>
+                  </div>
+                  <span className="shrink-0 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] lg:text-[10px] font-bold uppercase tracking-widest border border-emerald-200 shadow-sm">
+                    {promo.discountType === 'percentage'
+                      ? `${promo.discountValue}% OFF`
+                      : `₱${promo.discountValue} OFF`}
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <p className="text-[9px] lg:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 lg:mb-1">Active Promo</p>
-                  <p className="text-sm lg:text-base font-bold text-gray-900">Christmas Promo</p>
-                </div>
-                <span className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] lg:text-[10px] font-bold uppercase tracking-widest border border-emerald-200 shadow-sm">10% OFF</span>
-              </div>
+              ))}
 
               {todaysSchedule.length === 0 ? (
                 <p className="text-xs lg:text-sm text-gray-400 text-center py-10 lg:py-12 border-2 border-dashed border-gray-300 rounded-3xl font-medium bg-white/50">No check-ins or check-outs today.</p>
@@ -366,7 +405,7 @@ export default function AdminCalendar({ bookings = [], onOpenNotif, pendingCount
                       </div>
                       
                       <span className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-[9px] lg:text-[10px] font-bold uppercase tracking-widest border shadow-sm ${
-                        isCheckIn ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-blue-50 text-blue-600 border-blue-200'
+                        isCheckIn ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'
                       }`}>
                         {isCheckIn ? 'Confirmed' : 'Departing'}
                       </span>
