@@ -10,10 +10,17 @@ import MoltenMetal from '../ui/MoltenMetal';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+const handleMobileFocus = (e) => {
+  if (window.innerWidth < 1024) {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+};
+
 const PACKAGES = [
   {
     name: 'Beloved',
-    group: 'mini',
     paxRange: '2–4 pax',
     minPax: 1,
     maxPax: 4,
@@ -29,7 +36,6 @@ const PACKAGES = [
   },
   {
     name: 'Bliss',
-    group: 'mini',
     paxRange: '5–6 pax',
     minPax: 5,
     maxPax: 6,
@@ -45,7 +51,6 @@ const PACKAGES = [
   },
   {
     name: 'Bunch',
-    group: 'mini',
     paxRange: '7–12 pax',
     minPax: 7,
     maxPax: 12,
@@ -61,7 +66,6 @@ const PACKAGES = [
   },
   {
     name: 'Bloom',
-    group: 'main',
     paxRange: 'Up to 18 pax',
     minPax: 13,
     maxPax: 18,
@@ -77,7 +81,6 @@ const PACKAGES = [
   },
   {
     name: 'Bond',
-    group: 'main',
     paxRange: 'Up to 26 pax (Max 30)',
     minPax: 19,
     maxPax: 30,
@@ -94,7 +97,6 @@ const PACKAGES = [
   },
   {
     name: 'Bash',
-    group: 'all',
     paxRange: 'Up to 40 pax',
     minPax: 31,
     maxPax: 40,
@@ -109,19 +111,6 @@ const PACKAGES = [
     amenities: ['Swimming pool', '7 Bedrooms', 'Videoke room', 'Billiards', 'Basketball', 'Outdoor dining', 'Kitchen', 'BBQ Grill', 'Free WiFi', 'Parking space'],
   },
 ];
-
-// Checks if an existing booking conflicts with the currently selected package
-const isConflictingBooking = (selectedGroup, bookingData) => {
-  const bookedPkg = PACKAGES.find((p) => p.name === bookingData.package);
-  const bookedGroup = bookedPkg
-    ? bookedPkg.group
-    : bookingData.villaType === 'Mini Villa'
-      ? 'mini'
-      : 'main';
-
-  if (selectedGroup === 'all' || bookedGroup === 'all') return true;
-  return selectedGroup === bookedGroup;
-};
 
 const getRecommendedPackageByPax = (pax) => {
   const count = Math.max(1, Math.min(40, Number(pax) || 1));
@@ -158,6 +147,8 @@ const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, pl
       onChange={onChange}
       onFocus={handleMobileFocus}
       placeholder={placeholder}
+      min={min}
+      max={max}
       maxLength={maxLength}
       pattern={pattern}
       title={title}
@@ -167,7 +158,31 @@ const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, pl
   </div>
 );
 
-const SelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
+const DatePickerField = ({ icon: Icon, label, selected, onChange, minDate, maxDate, excludeDates, disabled, placeholderText }) => (
+  <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 px-3 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+    <div className="flex items-center text-gray-400 shrink-0 w-20">
+      <Icon size={14} className="text-[#C98A1E] shrink-0 mr-1.5" />
+      <span className="text-[11px] font-medium whitespace-nowrap">{label}</span>
+    </div>
+    <div className="w-px h-5 bg-gray-300 mx-2 shrink-0"></div>
+    <DatePicker
+      selected={selected}
+      onChange={onChange}
+      onFocus={handleMobileFocus}
+      minDate={minDate}
+      maxDate={maxDate}
+      excludeDates={excludeDates}
+      dateFormat="MMMM d, yyyy"
+      placeholderText={placeholderText || "Select date"}
+      disabled={disabled}
+      className={`bg-transparent flex-1 outline-none text-xs text-gray-800 font-medium w-full min-w-0 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+      wrapperClassName="w-full flex-1"
+      required
+    />
+  </div>
+);
+
+const PackageSelectField = ({ icon: Icon, label, name, value, onChange, compact }) => (
   <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 ${compact ? 'px-2' : 'px-3'}`}>
     <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-auto' : 'w-20'}`}>
       <Icon size={14} className={`text-[#C98A1E] shrink-0 ${compact ? 'mr-1' : 'mr-1.5'}`} />
@@ -299,6 +314,14 @@ export default function BookingForm() {
     });
   };
 
+  const handleDateChange = (name, date) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: date,
+      ...(name === 'checkIn' && { checkOut: null }),
+    }));
+  };
+
   const handleSelectPackageFromModal = (pkg) => {
     setFormData((prev) => {
       const currentPax = Number(prev.people) || pkg.minPax;
@@ -311,6 +334,7 @@ export default function BookingForm() {
     });
     setIsPackagesOpen(false);
   };
+
   let minCheckOut = new Date();
   let maxCheckOut = null;
 
@@ -701,26 +725,6 @@ export default function BookingForm() {
                 </button>
               </div>
             </div>
-
-            <DatePickerField 
-              icon={CalendarDays} 
-              label="Check In" 
-              selected={formData.checkIn} 
-              onChange={(date) => handleDateChange('checkIn', date)} 
-              minDate={new Date()}
-              excludeDates={bookedDates}
-            />
-            
-            <DatePickerField 
-              icon={CalendarDays} 
-              label="Check Out" 
-              selected={formData.checkOut} 
-              onChange={(date) => handleDateChange('checkOut', date)} 
-              minDate={minCheckOut}
-              maxDate={maxCheckOut}
-              disabled={!formData.checkIn}
-              placeholderText={!formData.checkIn ? "Select Check In first" : "Select date"}
-            />
 
             <button 
               type="submit" 
