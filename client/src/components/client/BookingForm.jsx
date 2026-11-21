@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Mail, Phone, CalendarDays, Home as HomeIcon, Users,
-  Check, X, TreePine, LogIn, Sparkles, Package, Info
+  Check, X, TreePine, LogIn, Sparkles, Package, Info, Percent
 } from 'lucide-react';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -134,6 +134,13 @@ const formatDateForDB = (dateObj) => {
   return `${year}-${month}-${day}`;
 };
 
+// Works out how much a promo takes off the subtotal (never below ₱0)
+const calcDiscount = (promo, subtotal) => {
+  const value = Number(promo.discountValue) || 0;
+  const raw = promo.discountType === 'percentage' ? (subtotal * value) / 100 : value;
+  return Math.min(Math.round(raw), subtotal);
+};
+
 const FormField = ({ icon: Icon, label, type = "text", name, value, onChange, placeholder, min, max, compact, maxLength, pattern, title }) => (
   <div className={`flex items-center bg-[#EFEFEF] rounded-xl py-2.5 mb-3 ${compact ? 'px-2' : 'px-3'}`}>
     <div className={`flex items-center text-gray-400 shrink-0 ${compact ? 'w-auto' : 'w-20'}`}>
@@ -214,6 +221,7 @@ export default function BookingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookedDates, setBookedDates] = useState([]);
   const [activeBookings, setActiveBookings] = useState([]);
+  const [promos, setPromos] = useState([]);
   const [confirmation, setConfirmation] = useState({
     show: false,
     refId: '',
@@ -222,6 +230,8 @@ export default function BookingForm() {
     checkOut: '',
     people: 0,
     totalPrice: 0,
+    promoTitle: null,
+    discountAmount: 0,
   });
   
   const [formData, setFormData] = useState({
@@ -276,6 +286,18 @@ export default function BookingForm() {
     };
 
     fetchBookings();
+  }, []);
+
+  useEffect(() => {
+    const fetchPromos = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'promotions'));
+        setPromos(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch (error) {
+        console.error('Error fetching promos:', error);
+      }
+    };
+    fetchPromos();
   }, []);
 
   const handleChange = (e) => {
@@ -353,12 +375,28 @@ export default function BookingForm() {
     }
   }
 
+  // --- PRICE CALCULATION (with promo) ---
   const paxCount = Math.max(1, Number(formData.people) || 1);
   const extraPax = selectedPkg.extraHeadFee && paxCount > selectedPkg.basePax ? paxCount - selectedPkg.basePax : 0;
   const extraFee = extraPax * (selectedPkg.extraHeadFee || 0);
   const nightlyTotal = selectedPkg.nonPeakRate + extraFee;
   const nights = getNights(formData.checkIn, formData.checkOut);
-  const estimatedTotal = nightlyTotal * nights;
+  const subtotal = nightlyTotal * nights;
+
+  const checkInKey = formData.checkIn ? formatDateForDB(formData.checkIn) : null;
+
+  // Pick the promo with the biggest discount whose dates include the check-in date
+  const appliedPromo = checkInKey
+    ? promos.reduce((best, promo) => {
+        if (!promo.startDate || !promo.endDate) return best;
+        if (checkInKey < promo.startDate || checkInKey > promo.endDate) return best;
+        const amount = calcDiscount(promo, subtotal);
+        return amount > (best?.amount || 0) ? { ...promo, amount } : best;
+      }, null)
+    : null;
+
+  const discountAmount = appliedPromo ? appliedPromo.amount : 0;
+  const estimatedTotal = subtotal - discountAmount;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -379,6 +417,10 @@ export default function BookingForm() {
         phone: formData.number,
         status: "pending",
         totalPrice: estimatedTotal,
+        subtotal,
+        discountAmount,
+        promoId: appliedPromo?.id || null,
+        promoTitle: appliedPromo?.title || null,
       });
 
       setConfirmation({
@@ -389,6 +431,8 @@ export default function BookingForm() {
         checkOut: checkOutStr,
         people: Number(formData.people),
         totalPrice: estimatedTotal,
+        promoTitle: appliedPromo?.title || null,
+        discountAmount,
       });
     } catch (error) {
       console.error("Booking error:", error);
@@ -429,6 +473,14 @@ export default function BookingForm() {
                   {confirmation.checkIn} → {confirmation.checkOut}
                 </span>
               </div>
+              {confirmation.discountAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">{confirmation.promoTitle}</span>
+                  <span className="font-semibold text-emerald-600">
+                    −₱{confirmation.discountAmount.toLocaleString()}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between pt-1.5 border-t border-[#F5E1C8]">
                 <span className="text-gray-500">Est. Total</span>
                 <span className="font-bold text-[#C98A1E]">
@@ -709,6 +761,9 @@ export default function BookingForm() {
                   <p className="text-[11px] text-gray-600 mt-0.5">{selectedPkg.paxRange} · {selectedPkg.bedrooms}</p>
                 </div>
                 <div className="text-right shrink-0">
+                  {discountAmount > 0 && (
+                    <p className="text-[10px] text-gray-400 line-through">₱{subtotal.toLocaleString()}</p>
+                  )}
                   <p className="text-sm font-bold text-[#C98A1E]">₱{estimatedTotal.toLocaleString()}</p>
                   <p className="text-[10px] text-gray-500">
                     {nights > 1 ? `for ${nights} nights` : 'non-peak / night'}
@@ -720,6 +775,18 @@ export default function BookingForm() {
                 <div className="mt-2 pt-2 border-t border-[#F5E1C8] text-[10px] text-gray-700 flex justify-between">
                   <span>Base (₱{selectedPkg.nonPeakRate.toLocaleString()}) + {extraPax} extra pax</span>
                   <span className="font-semibold">+₱{extraFee.toLocaleString()}</span>
+                </div>
+              )}
+
+              {appliedPromo && (
+                <div className="mt-2 pt-2 border-t border-[#F5E1C8] text-[10px] text-emerald-700 flex justify-between">
+                  <span className="flex items-center gap-1">
+                    <Percent size={11} /> {appliedPromo.title}
+                    {appliedPromo.discountType === 'percentage'
+                      ? ` (${appliedPromo.discountValue}% off)`
+                      : ` (₱${appliedPromo.discountValue} off)`}
+                  </span>
+                  <span className="font-semibold">−₱{discountAmount.toLocaleString()}</span>
                 </div>
               )}
 

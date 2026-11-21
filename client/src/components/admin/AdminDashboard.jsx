@@ -9,10 +9,10 @@ import NotificationsModal from '../ui/NotificationModal';
 import ManualBookingModal from '../ui/ManualBooking'; // Ensure this matches your file name
 import balaiLogo from '../../assets/BalaiLogo.svg';
 import PromoCreation from './PromoCreation';
- 
+
 const GOLD = "#B97216";
 const GOLD_DEEP = "#C98A1E";
- 
+
 const BellIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z" />
@@ -31,7 +31,7 @@ const ClockIcon = () => (
     <path d="M12 7.5V12l3 2" />
   </svg>
 );
- 
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
@@ -43,11 +43,11 @@ const AdminDashboard = () => {
   const [isManualOpen, setIsManualOpen] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false); // mobile sidebar drawer
   const [isCollapsed, setIsCollapsed] = useState(true); // desktop: icons only vs. icons + labels
- 
+
   useEffect(() => {
     const auth = getAuth();
     let unsubscribeSnapshot = null;
- 
+
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (!user) {
         navigate('/', { replace: true });
@@ -62,49 +62,49 @@ const AdminDashboard = () => {
         });
       }
     });
- 
+
     return () => {
       unsubscribeAuth();
       if (unsubscribeSnapshot) unsubscribeSnapshot();
     };
   }, [navigate]);
- 
+
   const handleLogout = async () => {
     try { await signOut(getAuth()); } finally { navigate('/', { replace: true }); }
   };
- 
+
   const formatYYYYMMDD = (date) => {
     const d = new Date(date);
     return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
   };
   // Bookings may store dates as YYYY-MM-DD text or as a Firestore Timestamp
   const toDateStr = (v) => (typeof v?.toDate === 'function' ? formatYYYYMMDD(v.toDate()) : String(v || ''));
- 
+
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
- 
+
   if (checking || loading) {
     return <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA] text-sm text-neutral-500 font-poppins">Loading Dashboard Data...</div>;
   }
- 
+
   // --- Filter Bookings by Status ---
   const pendingBookings = bookings.filter(b => b.status === 'pending');
   const confirmedBookings = bookings.filter(b => b.status === 'confirmed');
- 
+
   // --- Home Dashboard Logic (Only looks at confirmed bookings) ---
   const today = new Date();
   const todayStr = formatYYYYMMDD(today);
   const currentMonthPrefix = todayStr.substring(0, 7); 
- 
+
   const stats = {
     upcoming: confirmedBookings.filter(b => toDateStr(b.checkIn).startsWith(currentMonthPrefix)).length,
     confirmed: confirmedBookings.length,
     pending: pendingBookings.length
   };
- 
+
   const currentBooking = confirmedBookings.find(b => toDateStr(b.checkIn) <= todayStr && toDateStr(b.checkOut) > todayStr);
   const isOccupied = !!currentBooking;
   const checkOutDate = currentBooking ? new Date(`${toDateStr(currentBooking.checkOut)}T00:00:00`) : null;
- 
+
   const liveActivities = confirmedBookings
     .filter(b => toDateStr(b.checkIn) === todayStr || toDateStr(b.checkOut) === todayStr)
     .map(b => ({
@@ -117,7 +117,7 @@ const AdminDashboard = () => {
       avatar: toDateStr(b.checkIn) === todayStr ? '#E9AE57' : '#F3D9AF',
       badge: b.status.charAt(0).toUpperCase() + b.status.slice(1),
     }));
- 
+
   return (
     <div className="flex bg-[#F8F9FA] min-h-screen font-poppins relative">
       
@@ -127,12 +127,12 @@ const AdminDashboard = () => {
         onClose={() => setIsNotifOpen(false)} 
         pendingBookings={pendingBookings} 
       />
- 
+
       <ManualBookingModal 
         isOpen={isManualOpen} 
         onClose={() => setIsManualOpen(false)} 
       />
- 
+
       {/* Sidebar */}
       <AdminNavbar
         currentView={view}
@@ -141,6 +141,7 @@ const AdminDashboard = () => {
         setIsNavOpen={setIsNavOpen}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
+        onLogout={handleLogout}
       />
       
       {/* Main Content Area */}
@@ -178,11 +179,11 @@ const AdminDashboard = () => {
                 {stats.pending > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#F8F9FA] rounded-full shadow-sm animate-pulse"></span>}
               </button>
             </header>
- 
+
             <h1 className="mt-6 lg:mt-8 font-['Poppins',serif] font-bold text-3xl lg:text-4xl leading-tight">
               Good day, <em style={{ color: GOLD }}>Admin.</em>
             </h1>
- 
+
             {/* Grid Layout for Desktop vs Mobile */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8 lg:mt-10">
               
@@ -214,7 +215,7 @@ const AdminDashboard = () => {
                     </div>
                   )}
                 </section>
- 
+
                 {/* Live Activities */}
                 <section>
                   <div className="flex items-end justify-between mb-5">
@@ -226,7 +227,7 @@ const AdminDashboard = () => {
                       View Calendar
                     </button>
                   </div>
- 
+
                   <ul className="space-y-4">
                     {liveActivities.length === 0 ? (
                        <li className="rounded-3xl bg-white p-8 shadow-sm border border-dashed border-gray-300 text-center text-sm text-gray-400 font-medium">
@@ -252,7 +253,7 @@ const AdminDashboard = () => {
                   </ul>
                 </section>
               </div>
- 
+
               {/* Right Column (Stats & Shortcuts) */}
               <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-8">
                 
@@ -268,7 +269,7 @@ const AdminDashboard = () => {
                     <p className="mt-6 text-6xl font-light tracking-tight" style={{ color: GOLD }}>{stats.upcoming}</p>
                     <p className="text-xs lg:text-sm text-neutral-400 mt-2 font-medium">Upcoming this month</p>
                   </article>
- 
+
                   <article onClick={() => setIsNotifOpen(true)} className="rounded-3xl bg-white p-6 shadow-sm border border-gray-100 cursor-pointer hover:border-red-200 hover:shadow-md transition-all">
                     <div className="flex items-start justify-between">
                       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500">
@@ -280,7 +281,7 @@ const AdminDashboard = () => {
                     <p className="text-xs lg:text-sm text-neutral-400 mt-2 font-medium">Action Required</p>
                   </article>
                 </section>
- 
+
                 {/* Shortcuts */}
                 <section className="bg-white p-6 lg:p-8 rounded-3xl shadow-sm border border-gray-100">
                   <p className="text-[10px] lg:text-xs text-neutral-400 uppercase tracking-widest font-bold mb-1">Tools</p>
@@ -304,15 +305,10 @@ const AdminDashboard = () => {
                     </button>
                   </div>
                 </section>
- 
+
               </div>
             </div>
- 
-            <div className="mt-16 text-center border-t border-gray-200 pt-8">
-              <button type="button" onClick={handleLogout} className="text-xs uppercase tracking-widest font-bold text-neutral-400 hover:text-neutral-900 transition-colors">
-                Log out securely
-              </button>
-            </div>
+
             
           </div>
         )}
@@ -320,5 +316,5 @@ const AdminDashboard = () => {
     </div>
   );
 };
- 
+
 export default AdminDashboard;
