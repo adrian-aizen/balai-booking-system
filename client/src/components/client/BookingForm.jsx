@@ -7,6 +7,7 @@ import {
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import MoltenMetal from '../ui/MoltenMetal';
+import LoginModal from '../ui/LoginModal';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -208,6 +209,7 @@ const PackageSelectField = ({ icon: Icon, label, name, value, onChange, compact 
 export default function BookingForm() {
   const navigate = useNavigate();
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isPackagesOpen, setIsPackagesOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookedDates, setBookedDates] = useState([]);
@@ -398,7 +400,7 @@ export default function BookingForm() {
 
   return (
     <div className="relative min-h-[100dvh] w-full overflow-x-hidden font-poppins flex flex-col items-center justify-center pt-24 lg:pt-0 pb-12 px-6 lg:px-20">
-
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
       {/* --- BOOKING CONFIRMATION MODAL --- */}
       {confirmation.show && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-6 animate-fade-in">
@@ -603,7 +605,14 @@ export default function BookingForm() {
             <button onClick={() => setIsNavOpen(false)} className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold text-white font-semibold">
               <CalendarDays size={20} /> <span className="text-sm">Book Now</span>
             </button>
-            <button className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setIsNavOpen(false);
+                setIsLoginOpen(true);
+              }}
+              className="flex items-center gap-3 hover:text-white transition-colors focus:text-white focus:font-semibold mt-4"
+            >
               <LogIn size={20} /> <span className="text-sm">Admin Access</span>
             </button>
           </nav>
